@@ -1,10 +1,10 @@
 <%= form_with(model: book, class: "needs-validation", html: { data: { controller: "book-search" } }) do |form| %>
-  <%= form.hidden_field :title, data: { book_search_target: "hiddenTitle" } %>
-  <%= form.hidden_field :author, data: { book_search_target: "hiddenAuthor" } %>
-  <%= form.hidden_field :cover_url, data: { book_search_target: "hiddenCoverUrl" } %>
+  <%= form.hidden_field :title, data: { book_search_target: "title" } %>
+  <%= form.hidden_field :author, data: { book_search_target: "author" } %>
+  <%= form.hidden_field :cover_url, data: { book_search_target: "coverUrl" } %>
 
   <% if book.errors.any? %>
-    <div class="alert alert-danger" data-book-search-target="errors">
+    <div class="alert alert-danger">
       <strong><%= pluralize(book.errors.count, "error") %> prevented this book from being saved:</strong>
       <ul class="mb-0 mt-1">
         <% book.errors.each do |error| %>
@@ -14,39 +14,7 @@
     </div>
   <% end %>
 
-  <%# Selection preview — shown after a book is chosen %>
-  <div class="mb-3 d-none" data-book-search-target="selectionPreview">
-    <label class="form-label">Selected Book</label>
-    <div class="d-flex align-items-center gap-3 p-3 border rounded">
-      <img src="" style="height:70px; width:50px; object-fit:cover; border-radius:3px; flex-shrink:0;"
-           class="d-none" data-book-search-target="previewCover" alt="">
-      <div class="overflow-hidden flex-grow-1">
-        <div class="fw-semibold text-truncate" data-book-search-target="previewTitle"></div>
-        <div class="text-muted small text-truncate" data-book-search-target="previewAuthor"></div>
-      </div>
-      <button type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0"
-              data-action="book-search#clearSelection">Change</button>
-    </div>
-  </div>
-
-  <%# Search section — shown initially, hidden after selection %>
-  <div class="mb-3" data-book-search-target="searchSection">
-    <label class="form-label d-flex align-items-center gap-2" for="book_query">
-      Search for a Book
-      <div class="spinner-border spinner-border-sm text-secondary d-none"
-           role="status" data-book-search-target="spinner">
-        <span class="visually-hidden">Loading…</span>
-      </div>
-    </label>
-    <input type="text" id="book_query" class="form-control"
-           placeholder="Search by title or author..."
-           autocomplete="off"
-           data-book-search-target="query"
-           data-action="input->book-search#search">
-    <turbo-frame id="book-search-results"
-                 data-book-search-target="results"
-                 data-action="turbo:before-fetch-request->book-search#showSpinner turbo:frame-load->book-search#hideSpinner turbo:fetch-error->book-search#hideSpinner"></turbo-frame>
-  </div>
+  <div data-book-search-target="root"></div>
 
   <div class="d-flex gap-2">
     <%= form.submit class: "btn btn-primary" %>
