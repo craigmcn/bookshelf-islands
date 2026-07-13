@@ -1,5 +1,4 @@
 require "test_helper"
-require "minitest/mock"
 
 class BookSearchControllerTest < ActionDispatch::IntegrationTest
   test "guest is redirected to sign in" do
@@ -11,12 +10,14 @@ class BookSearchControllerTest < ActionDispatch::IntegrationTest
     sign_in_as users(:member)
     results = [{title: "The Hobbit", author: "J.R.R. Tolkien", cover_url: "https://covers.openlibrary.org/b/id/1-M.jpg"}]
 
-    OpenLibraryService.stub :search, results do
-      get book_search_url(q: "hobbit", format: :json)
-    end
+    original_search = OpenLibraryService.method(:search)
+    OpenLibraryService.define_singleton_method(:search) { |*| results }
+    get book_search_url(q: "hobbit", format: :json)
 
     assert_response :success
     assert_equal results.as_json, JSON.parse(response.body)
+  ensure
+    OpenLibraryService.define_singleton_method(:search, original_search)
   end
 
   test "returns an empty array for a blank query" do
