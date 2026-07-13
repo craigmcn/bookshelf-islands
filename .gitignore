@@ -32,3 +32,5 @@
 
 /node_modules
 .vscode
+
+/.yarn/install-state.gz

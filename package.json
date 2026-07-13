@@ -3,15 +3,19 @@
   "private": true,
   "devDependencies": {
     "@fullhuman/postcss-purgecss": "^8.0.0",
-    "esbuild": "^0.28.0"
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "esbuild": "^0.28.0",
+    "typescript": "^6.0.3"
   },
   "scripts": {
-    "build": "esbuild app/javascript/*.* --bundle --sourcemap --format=esm --outdir=app/assets/builds --public-path=/assets",
+    "build": "esbuild app/javascript/*.* --bundle --sourcemap --format=esm --outdir=app/assets/builds --public-path=/assets --jsx=automatic",
     "build:css:fonts": "sass ./app/assets/stylesheets/fonts.scss:./app/assets/builds/fonts.css --no-source-map --style=compressed",
     "build:css:compile": "sass ./app/assets/stylesheets/application.bootstrap.scss:./app/assets/builds/application.css --no-source-map --style=compressed --load-path=node_modules",
     "build:css:prefix": "postcss ./app/assets/builds/application.css --output=./app/assets/builds/application.css",
     "build:css": "yarn build:css:fonts && yarn build:css:compile && yarn build:css:prefix",
-    "watch:css": "nodemon --watch ./app/assets/stylesheets/ --ext scss --exec \"yarn build:css\""
+    "watch:css": "nodemon --watch ./app/assets/stylesheets/ --ext scss --exec \"yarn build:css\"",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@fontsource/outfit": "^5.2.8",
@@ -23,9 +27,12 @@
     "nodemon": "^3.1.14",
     "postcss": "^8.5.15",
     "postcss-cli": "^11.0.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
     "sass": "^1.100.0"
   },
   "browserslist": [
     "defaults"
-  ]
+  ],
+  "packageManager": "yarn@4.9.1+sha512.f95ce356460e05be48d66401c1ae64ef84d163dd689964962c6888a9810865e39097a5e9de748876c2e0bf89b232d583c33982773e9903ae7a76257270986538"
 }

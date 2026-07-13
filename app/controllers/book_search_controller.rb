@@ -2,10 +2,8 @@ class BookSearchController < ApplicationController
   def index
     query = params[:q].to_s.strip
 
-    @results = if query.present?
-      OpenLibraryService.search(query)
-    end
+    @results = query.present? ? OpenLibraryService.search(query) : []
 
-    render layout: false
+    render json: @results
   end
 end
