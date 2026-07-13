@@ -39,7 +39,10 @@ export default function BookSearch({ initialTitle, initialAuthor, initialCoverUr
     const timeout = setTimeout(() => {
       setLoading(true)
       fetch(`/book_search.json?q=${encodeURIComponent(query.trim())}`, { signal: controller.signal })
-        .then((response) => response.json())
+        .then((response) => {
+          if (!response.ok) throw new Error(`Book search failed: ${response.status}`)
+          return response.json()
+        })
         .then((data: SearchResult[]) => setResults(data))
         .catch((error: unknown) => {
           if ((error as { name?: string }).name !== "AbortError") setResults([])
@@ -113,7 +116,7 @@ export default function BookSearch({ initialTitle, initialAuthor, initialCoverUr
         <p className="text-muted small mt-2 mb-0">No results found.</p>
       )}
       {results.length > 0 && (
-        <div className="list-group mt-2">
+        <div className="list-group mt-2" aria-label="Book search results">
           {results.map((result, index) => (
             <button
               key={`${result.title}-${result.author}-${index}`}
