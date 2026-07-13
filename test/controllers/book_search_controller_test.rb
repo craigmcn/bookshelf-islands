@@ -1,4 +1,5 @@
 require "test_helper"
+require "minitest/mock"
 
 class BookSearchControllerTest < ActionDispatch::IntegrationTest
   test "guest is redirected to sign in" do
