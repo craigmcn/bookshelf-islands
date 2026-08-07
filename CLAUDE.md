@@ -133,7 +133,14 @@ namespace :admin
 Inherit from `Admin::BaseController` — it enforces `moderator_or_above?` and provides `require_admin!`.
 
 ### Open Library integration
-`OpenLibraryService.search(query)` returns an array of hashes with `:title`, `:author`, `:cover_url`. The `BookSearchController` serves results into a Turbo Frame (`#book-search-results`). The Stimulus controller (`book_search_controller.js`) debounces input at 300ms.
+`OpenLibraryService.search(query)` returns an array of hashes with `:title`, `:author`, `:cover_url`. `BookSearchController#index` (`/book_search.json`) serves results as JSON, consumed directly by the React `BookSearch` component (`app/javascript/components/BookSearch.tsx`), which debounces input at 300ms client-side.
+
+### React islands
+The project goal is out-of-the-box Rails + Hotwire/Stimulus for page-level "snappy" navigation, with React reserved for self-contained interaction islands — Stimulus is used only as a thin mount/bridge, never for the interaction logic itself. Pattern (see `book_search_controller.tsx` + `BookSearch.tsx`):
+1. A Stimulus controller (`app/javascript/controllers/<name>_controller.tsx`) targets a mount `<div>` and any hidden form fields it needs to sync.
+2. `connect()` creates a React root on the mount target and renders the component; `disconnect()` unmounts it.
+3. The React component owns all interaction state; it reports changes back via an `onChange` callback, which the Stimulus controller writes into the hidden form fields.
+4. The component talks to Rails via a JSON endpoint (e.g. `/book_search.json`) rather than Turbo Frames/Streams.
 
 ### Asset builds
 Changes to JS or CSS require `yarn build` / `yarn build:css` (or keep `bin/dev` running). Compiled output lands in `app/assets/builds/`.

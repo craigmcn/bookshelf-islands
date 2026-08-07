@@ -2,7 +2,7 @@
 
 A shared reading list app built in Rails 8. Users log books they've read, rate them, and see what others are reading. Moderators and admins manage content.
 
-Built as a learning exercise to explore Rails auth/authz patterns before rebuilding in Niiwin. See [`doc/Community Bookshelf.md`](doc/Community%20Bookshelf.md) for the full spec and [`doc/build_log.md`](doc/build_log.md) for a step-by-step build history.
+Built as a learning exercise in React-in-Rails: the app aims to stay as close to out-of-the-box Rails (Hotwire/Stimulus for "snappy" page-level interactions) as possible, using React only for self-contained interaction "islands" mounted via a thin Stimulus bridge controller (see the book search form for the pattern). Companion repos `bookshelf-api` + `bookshelf-spa` explore the same domain as a Rails API + separate React SPA. See [`doc/Community Bookshelf.md`](doc/Community%20Bookshelf.md) for the full spec.
 
 ## Stack
 
