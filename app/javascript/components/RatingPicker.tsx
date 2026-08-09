@@ -28,13 +28,12 @@ export default function RatingPicker({ options, initialValue, onChange }: Rating
 
   return (
     <div className="d-flex align-items-center gap-2">
-      <div role="radiogroup" aria-label="Rating" className="d-flex gap-1">
+      <div role="group" aria-label="Rating" className="d-flex gap-1">
         {options.map((option) => (
           <button
             key={option.key}
             type="button"
-            role="radio"
-            aria-checked={option.key === selectedKey}
+            aria-pressed={option.key === selectedKey}
             aria-label={option.label}
             className="btn btn-link p-0 border-0"
             style={{ fontSize: "1.5rem", lineHeight: 1 }}
@@ -43,7 +42,7 @@ export default function RatingPicker({ options, initialValue, onChange }: Rating
             onClick={() => selectOption(option)}
           >
             <i
-              className={option.value <= displayValue ? "fas fa-star text-warning" : "far fa-star text-secondary"}
+              className={option.value <= displayValue ? "fasl fa-star text-warning" : "fasl fa-star text-secondary"}
               aria-hidden="true"
             />
           </button>
