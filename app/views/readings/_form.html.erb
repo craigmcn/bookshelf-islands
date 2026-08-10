@@ -22,10 +22,11 @@
           { prompt: "Select a status" }, { class: "form-select" } %>
   </div>
 
-  <div class="mb-3">
-    <%= form.label :rating, class: "form-label" %>
-    <%= form.select :rating, Reading.ratings.keys.map { |r| ["#{"☆" * Reading.ratings[r]} #{r.humanize}", r] },
-          { include_blank: "No rating" }, { class: "form-select" } %>
+  <div class="mb-3" data-controller="rating"
+       data-rating-options-value="<%= Reading.ratings.map { |key, value| {key: key, value: value, label: key.humanize} }.to_json %>">
+    <%= form.label :rating, class: "form-label d-block" %>
+    <%= form.hidden_field :rating, data: { rating_target: "input" } %>
+    <div data-rating-target="root"></div>
   </div>
 
   <div class="mb-3">

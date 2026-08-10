@@ -6,3 +6,6 @@ import { application } from "./application"
 
 import BookSearchController from "./book_search_controller"
 application.register("book-search", BookSearchController)
+
+import RatingController from "./rating_controller"
+application.register("rating", RatingController)
