@@ -34,3 +34,9 @@
 .vscode
 
 /.yarn/install-state.gz
+
+# Playwright e2e output
+/test-results
+/playwright-report
+/blob-report
+/playwright/.cache
