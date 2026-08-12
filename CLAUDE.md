@@ -139,10 +139,12 @@ Inherit from `Admin::BaseController` — it enforces `moderator_or_above?` and p
 
 ### React islands
 The project goal is out-of-the-box Rails + Hotwire/Stimulus for page-level "snappy" navigation, with React reserved for self-contained interaction islands — Stimulus is used only as a thin mount/bridge, never for the interaction logic itself. Pattern (see `book_search_controller.tsx` + `BookSearch.tsx`):
-1. A Stimulus controller (`app/javascript/controllers/<name>_controller.tsx`) targets a mount `<div>` and any hidden form fields it needs to sync.
+1. A Stimulus controller (`app/javascript/controllers/<name>_controller.tsx`) targets a mount `<div>` and any hidden form fields or DOM side effects it needs to handle.
 2. `connect()` creates a React root on the mount target and renders the component; `disconnect()` unmounts it.
-3. The React component owns all interaction state; it reports changes back via an `onChange` callback, which the Stimulus controller writes into the hidden form fields.
-4. The component talks to Rails via a JSON endpoint (e.g. `/book_search.json`) rather than Turbo Frames/Streams.
+3. The React component owns all interaction state; it reports changes back via a callback prop (e.g. `onChange`, `onDeleted`), which the Stimulus controller uses to write hidden form fields or make a DOM change outside the React tree (e.g. fading the containing table row).
+4. The component talks to Rails via a JSON endpoint (e.g. `/book_search.json`, or an existing HTML endpoint that also responds to `format.json`) rather than Turbo Frames/Streams.
+
+Existing islands: `BookSearch` (search-and-select, syncs hidden fields), `RatingPicker` (star picker, syncs a hidden field), `DeleteReadingControl` (admin moderation table — confirm + fetch DELETE + optimistic row fade, no hidden fields involved).
 
 ### Asset builds
 Changes to JS or CSS require `yarn build` / `yarn build:css` (or keep `bin/dev` running). Compiled output lands in `app/assets/builds/`.

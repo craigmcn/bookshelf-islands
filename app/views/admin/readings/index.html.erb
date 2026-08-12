@@ -47,9 +47,9 @@
                 <%= link_to "Show", reading_path(reading), class: "btn btn-sm btn-outline-secondary" %>
                 <% unless reading.deleted? %>
                   <%= link_to "Edit", edit_reading_path(reading), class: "btn btn-sm btn-outline-primary" %>
-                  <%= button_to "Delete", reading_path(reading), method: :delete,
-                        class: "btn btn-sm btn-outline-danger",
-                        form: { data: { turbo_confirm: "Remove this reading?" } } %>
+                  <div data-controller="delete-reading" data-delete-reading-url-value="<%= reading_path(reading) %>">
+                    <div data-delete-reading-target="root"></div>
+                  </div>
                 <% end %>
               </div>
             </td>
