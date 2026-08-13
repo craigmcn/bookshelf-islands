@@ -46,8 +46,10 @@
               <div class="d-flex gap-1">
                 <%= link_to "Show", reading_path(reading), class: "btn btn-sm btn-outline-secondary" %>
                 <% unless reading.deleted? %>
-                  <%= link_to "Edit", edit_reading_path(reading), class: "btn btn-sm btn-outline-primary" %>
-                  <div data-controller="delete-reading" data-delete-reading-url-value="<%= reading_path(reading) %>">
+                  <div class="d-flex gap-1" data-controller="delete-reading"
+                       data-delete-reading-url-value="<%= reading_path(reading) %>">
+                    <%= link_to "Edit", edit_reading_path(reading), class: "btn btn-sm btn-outline-primary",
+                          data: { delete_reading_target: "edit" } %>
                     <div data-delete-reading-target="root"></div>
                   </div>
                 <% end %>

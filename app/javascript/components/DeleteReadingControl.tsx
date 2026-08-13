@@ -19,7 +19,10 @@ export default function DeleteReadingControl({ readingUrl, onDeleted }: DeleteRe
         method: "DELETE",
         headers: { Accept: "application/json", "X-CSRF-Token": token },
       })
-      if (!response.ok) throw new Error(`Delete failed: ${response.status}`)
+      // require the exact 204 our destroy action returns on success, not just response.ok —
+      // fetch follows redirects, so an expired session bouncing to /sign_in would otherwise
+      // resolve to a 200 HTML response and be mistaken for a successful delete
+      if (response.status !== 204) throw new Error(`Delete failed: ${response.status}`)
       onDeleted()
     } catch {
       setStatus("error")
