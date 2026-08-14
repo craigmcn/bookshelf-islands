@@ -40,7 +40,10 @@ class ReadingsController < ApplicationController
   def destroy
     authorize @reading
     @reading.soft_delete
-    redirect_to readings_path, notice: "Reading was removed.", status: :see_other
+    respond_to do |format|
+      format.html { redirect_to readings_path, notice: "Reading was removed.", status: :see_other }
+      format.json { head :no_content }
+    end
   end
 
   private

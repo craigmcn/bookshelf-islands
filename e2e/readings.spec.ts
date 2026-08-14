@@ -41,14 +41,13 @@ test.describe("Readings", () => {
     await page.goto("/admin/readings");
 
     const row = page.locator("tr", { has: page.getByRole("link", { name: "The Great Gatsby" }) });
-    page.once("dialog", (dialog) => dialog.accept());
     await row.getByRole("button", { name: "Delete" }).click();
+    await row.getByRole("button", { name: "Yes" }).click();
 
-    // destroy redirects to the moderator's own shelf; go back to confirm the "deleted" badge
-    await page.goto("/admin/readings");
-    await expect(
-      page.locator("tr", { has: page.getByRole("link", { name: "The Great Gatsby" }) }).getByText("deleted")
-    ).toBeVisible();
+    // the delete island removes the row via fetch, no page reload — badge and
+    // fade should appear in place without navigating away from /admin/readings
+    await expect(row).toHaveClass(/opacity-50/);
+    await expect(row.getByText("Deleted")).toBeVisible();
 
     // fresh context instead of UI sign-out, to avoid racing the moderator's sign-out redirect
     const memberPage = await (await browser.newContext()).newPage();

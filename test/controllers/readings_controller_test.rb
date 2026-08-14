@@ -47,4 +47,13 @@ class ReadingsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to readings_url
     assert_not_nil @reading.reload.deleted_at
   end
+
+  test "moderator can soft-delete a reading via JSON (admin moderation island)" do
+    sign_in_as users(:moderator)
+    assert_no_difference "Reading.unscoped.count" do
+      delete reading_url(@reading), as: :json
+    end
+    assert_response :no_content
+    assert_not_nil @reading.reload.deleted_at
+  end
 end

@@ -9,3 +9,6 @@ application.register("book-search", BookSearchController)
 
 import RatingController from "./rating_controller"
 application.register("rating", RatingController)
+
+import DeleteReadingController from "./delete_reading_controller"
+application.register("delete-reading", DeleteReadingController)
