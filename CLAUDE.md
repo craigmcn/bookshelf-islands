@@ -2,6 +2,14 @@
 
 A Rails 8 community reading-list app where members track books, log readings, and write reviews. Moderators/admins manage content via a scoped admin dashboard.
 
+## Project Goal
+
+This started as a React-islands architecture demo — a Rails 8 + Hotwire/Stimulus port of `community_bookshelf` with select interactive widgets reimplemented as React islands. The goal has since expanded: **bookshelf-islands is working toward full feature parity with `community_bookshelf`, so it can serve as a drop-in replacement for a running `community_bookshelf` instance.**
+
+`community_bookshelf` is the feature-complete reference implementation. Its full roadmap (`doc/feature_roadmap.md` there) and hardening/accessibility/observability work (see its GitHub issue tracker) define the target state here. GitHub Project #18 (`bookshelf-islands Roadmap`) tracks the outstanding gap, issue-for-issue against `community_bookshelf`'s closed issues.
+
+**Porting approach:** where practical, copy code/files directly from `community_bookshelf` rather than reimplementing from scratch, and add a short comment noting the source (e.g. `# ported from community_bookshelf app/models/tag.rb`) so the two repos can be kept in sync as `community_bookshelf` evolves. The React-islands pattern (below) still applies to new self-contained interactive widgets, but is no longer the organizing constraint for the whole app — most of `community_bookshelf`'s remaining surface (models, controllers, Hotwire/Turbo views) should be ported as-is.
+
 ## Tech Stack
 
 - **Ruby** 4.0.5 / **Rails** 8.1.3
@@ -138,7 +146,7 @@ Inherit from `Admin::BaseController` — it enforces `moderator_or_above?` and p
 `OpenLibraryService.search(query)` returns an array of hashes with `:title`, `:author`, `:cover_url`. `BookSearchController#index` (`/book_search.json`) serves results as JSON, consumed directly by the React `BookSearch` component (`app/javascript/components/BookSearch.tsx`), which debounces input at 300ms client-side.
 
 ### React islands
-The project goal is out-of-the-box Rails + Hotwire/Stimulus for page-level "snappy" navigation, with React reserved for self-contained interaction islands — Stimulus is used only as a thin mount/bridge, never for the interaction logic itself. Pattern (see `book_search_controller.tsx` + `BookSearch.tsx`):
+For page-level navigation, default to out-of-the-box Rails + Hotwire/Stimulus, with React reserved for self-contained interaction islands — Stimulus is used only as a thin mount/bridge, never for the interaction logic itself. This pattern still governs any *new* interactive widget; it isn't a constraint on porting the rest of `community_bookshelf`'s Hotwire/Turbo views as-is (see Project Goal above). Pattern (see `book_search_controller.tsx` + `BookSearch.tsx`):
 1. A Stimulus controller (`app/javascript/controllers/<name>_controller.tsx`) targets a mount `<div>` and any hidden form fields or DOM side effects it needs to handle.
 2. `connect()` creates a React root on the mount target and renders the component; `disconnect()` unmounts it.
 3. The React component owns all interaction state; it reports changes back via a callback prop (e.g. `onChange`, `onDeleted`), which the Stimulus controller uses to write hidden form fields or make a DOM change outside the React tree (e.g. fading the containing table row).
