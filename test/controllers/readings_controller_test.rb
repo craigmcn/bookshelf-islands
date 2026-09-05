@@ -16,6 +16,51 @@ class ReadingsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  # Search, filter, sort, pagination (JSON API backing the ShelfBrowser island)
+  test "shelf json filters by title or author" do
+    sign_in_as users(:member)
+    Reading.create!(user: users(:member), book: books(:two), status: :reading)
+
+    get readings_url(q: "1984", format: :json)
+    assert_response :success
+    readings = JSON.parse(response.body)["readings"]
+    assert_equal ["1984"], readings.pluck("book_title")
+  end
+
+  test "shelf json filters by status" do
+    sign_in_as users(:member)
+    Reading.create!(user: users(:member), book: books(:two), status: :finished)
+
+    get readings_url(status: "finished", format: :json)
+    readings = JSON.parse(response.body)["readings"]
+    assert_equal ["1984"], readings.pluck("book_title")
+  end
+
+  test "shelf json filters by rating" do
+    sign_in_as users(:member)
+    Reading.create!(user: users(:member), book: books(:two), status: :finished, rating: :two)
+
+    get readings_url(rating: "four", format: :json)
+    readings = JSON.parse(response.body)["readings"]
+    assert_equal ["The Great Gatsby"], readings.pluck("book_title")
+  end
+
+  test "shelf json only includes the current user's readings" do
+    sign_in_as users(:member)
+    Reading.create!(user: users(:admin), book: books(:two), status: :reading)
+
+    get readings_url(format: :json)
+    readings = JSON.parse(response.body)["readings"]
+    assert_equal ["The Great Gatsby"], readings.pluck("book_title")
+  end
+
+  test "shelf json ignores an unknown status or rating filter" do
+    sign_in_as users(:member)
+    get readings_url(status: "bogus", rating: "bogus", format: :json)
+    readings = JSON.parse(response.body)["readings"]
+    assert_equal ["The Great Gatsby"], readings.pluck("book_title")
+  end
+
   test "member can create a reading" do
     sign_in_as users(:member)
     assert_difference "Reading.count" do

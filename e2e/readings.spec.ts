@@ -10,6 +10,25 @@ test.describe("Readings", () => {
     await expect(row.locator("i.fa-star")).toHaveCount(4);
   });
 
+  test("member can search and filter their shelf", async ({ page }) => {
+    await signIn(page, users.member);
+    await page.goto("/readings");
+    await expect(page.getByRole("link", { name: "The Great Gatsby" })).toBeVisible();
+
+    await page.getByLabel("Search").fill("gatsby");
+    await expect(page.getByRole("link", { name: "The Great Gatsby" })).toBeVisible();
+
+    await page.getByLabel("Search").fill("nonexistent title");
+    await expect(page.getByText("No readings found.")).toBeVisible();
+
+    await page.getByLabel("Search").fill("");
+    await page.getByLabel("Status").selectOption("finished");
+    await expect(page.getByText("No readings found.")).toBeVisible();
+
+    await page.getByLabel("Status").selectOption("");
+    await expect(page.getByRole("link", { name: "The Great Gatsby" })).toBeVisible();
+  });
+
   test("member can log a reading with a status, rating, and review", async ({ page }) => {
     await signIn(page, users.member);
     await page.goto("/readings/new");

@@ -12,3 +12,9 @@ application.register("rating", RatingController)
 
 import DeleteReadingController from "./delete_reading_controller"
 application.register("delete-reading", DeleteReadingController)
+
+import CatalogBrowserController from "./catalog_browser_controller"
+application.register("catalog-browser", CatalogBrowserController)
+
+import ShelfBrowserController from "./shelf_browser_controller"
+application.register("shelf-browser", ShelfBrowserController)

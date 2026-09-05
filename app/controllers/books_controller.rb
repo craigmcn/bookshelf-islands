@@ -2,8 +2,31 @@ class BooksController < ApplicationController
   skip_before_action :require_login, only: [:index, :show]
   before_action :set_book, only: %i[show edit update destroy]
 
+  # ported from community_bookshelf app/controllers/books_controller.rb (SORT_OPTIONS + #index)
+  SORT_OPTIONS = {
+    "title" => {label: "Title", order: {title: :asc}},
+    "author" => {label: "Author", order: {author: :asc, title: :asc}},
+    "newest" => {label: "Recently Added", order: {created_at: :desc}}
+  }.freeze
+
   def index
-    @books = policy_scope(Book)
+    @books = policy_scope(Book).includes(:added_by)
+
+    if params[:q].present?
+      query = "%#{params[:q].strip}%"
+      @books = @books.where("books.title ILIKE :q OR books.author ILIKE :q", q: query)
+    end
+
+    @sort = SORT_OPTIONS.key?(params[:sort]) ? params[:sort] : "title"
+    @books = @books.order(SORT_OPTIONS[@sort][:order])
+
+    @pagy, @books = pagy(@books, limit: 12)
+    @catalog_json = catalog_page_json
+
+    respond_to do |format|
+      format.html
+      format.json { render json: @catalog_json }
+    end
   end
 
   def show
@@ -53,5 +76,24 @@ class BooksController < ApplicationController
 
   def book_params
     params.expect(book: [:title, :author, :cover_url])
+  end
+
+  def catalog_page_json
+    {
+      books: @books.map { |book| catalog_book_json(book) },
+      sort: @sort,
+      pagy: {page: @pagy.page, pages: @pagy.pages, count: @pagy.count}
+    }
+  end
+
+  def catalog_book_json(book)
+    {
+      id: book.id,
+      title: book.title,
+      author: book.author,
+      cover_url: book.cover_url.presence,
+      added_by_email: book.added_by.email,
+      path: book_path(book)
+    }
   end
 end

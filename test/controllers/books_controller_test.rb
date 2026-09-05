@@ -11,6 +11,40 @@ class BooksControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  # Search, sort, pagination (JSON API backing the CatalogBrowser island)
+  test "catalog json filters by title or author" do
+    get books_url(q: "1984", format: :json)
+    assert_response :success
+    books = JSON.parse(response.body)["books"]
+    assert_equal ["1984"], books.pluck("title")
+  end
+
+  test "catalog json sorts by author" do
+    get books_url(sort: "author", format: :json)
+    assert_response :success
+    books = JSON.parse(response.body)["books"]
+    assert_equal ["F. Scott Fitzgerald", "George Orwell"], books.pluck("author")
+  end
+
+  test "catalog json falls back to title sort for an unknown sort key" do
+    get books_url(sort: "bogus", format: :json)
+    assert_response :success
+    assert_equal "title", JSON.parse(response.body)["sort"]
+  end
+
+  test "catalog json paginates results" do
+    14.times { |n| Book.create!(title: "Extra #{n}", author: "Someone", added_by: users(:member)) }
+
+    get books_url(format: :json)
+    body = JSON.parse(response.body)
+    assert_equal 12, body["books"].length
+    assert_equal 2, body["pagy"]["pages"]
+
+    get books_url(page: 2, format: :json)
+    body = JSON.parse(response.body)
+    assert_equal 4, body["books"].length
+  end
+
   test "anyone can view a book" do
     get book_url(@book)
     assert_response :success
