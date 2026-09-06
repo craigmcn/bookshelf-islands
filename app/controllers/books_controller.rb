@@ -19,7 +19,7 @@ class BooksController < ApplicationController
     end
 
     if params[:tag].present?
-      @tag = Tag.find_by(name: params[:tag].to_s.strip.downcase)
+      @tag = Tag.genre.find_by(name: params[:tag].to_s.strip.downcase)
       @books = @tag ? @books.joins(:tags).where(tags: {id: @tag.id}) : @books.none
     end
 

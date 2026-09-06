@@ -69,7 +69,13 @@ export default function CatalogBrowser({ initial, initialQuery }: CatalogBrowser
         .then((result: CatalogPage) => setData(result))
         .catch((error: unknown) => {
           if ((error as { name?: string }).name !== "AbortError") {
-            setData({ books: [], sort, tag: tag || null, genre_tags: data.genre_tags, pagy: { page: 1, pages: 1, count: 0 } })
+            setData((current) => ({
+              books: [],
+              sort,
+              tag: tag || null,
+              genre_tags: current.genre_tags,
+              pagy: { page: 1, pages: 1, count: 0 },
+            }))
           }
         })
         .finally(() => setLoading(false))

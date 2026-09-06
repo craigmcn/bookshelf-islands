@@ -16,9 +16,10 @@
     <p class="fs-5 text-muted"><%= @book.author %></p>
     <p class="text-muted"><small>Added by <%= @book.added_by.email %></small></p>
 
-    <% if @book.tags.genre.any? %>
+    <% genre_tags = @book.tags.genre.order(:name).to_a %>
+    <% if genre_tags.any? %>
       <div class="d-flex flex-wrap gap-1 mb-2">
-        <% @book.tags.genre.order(:name).each do |tag| %>
+        <% genre_tags.each do |tag| %>
           <%= link_to tag.name, books_path(tag: tag.name), class: "badge text-bg-secondary text-decoration-none" %>
         <% end %>
       </div>
