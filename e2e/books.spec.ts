@@ -9,6 +9,21 @@ test.describe("Books", () => {
     await expect(page.getByRole("heading", { name: "The Great Gatsby" })).toBeVisible();
   });
 
+  test("anyone can search and sort the catalog", async ({ page }) => {
+    await page.goto("/books");
+    await expect(page.getByRole("link", { name: "1984" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "The Great Gatsby" })).toBeVisible();
+
+    await page.getByLabel("Search").fill("1984");
+    await expect(page.getByRole("link", { name: "The Great Gatsby" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "1984" })).toBeVisible();
+
+    await page.getByLabel("Search").fill("");
+    await page.getByLabel("Sort by").selectOption("author");
+    const titles = page.locator(".card-title");
+    await expect(titles.first()).toHaveText("The Great Gatsby"); // F. Scott Fitzgerald sorts before George Orwell
+  });
+
   test("member can search Open Library and add a book", async ({ page }) => {
     await signIn(page, users.member);
     await page.goto("/books/new");

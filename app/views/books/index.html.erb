@@ -9,24 +9,42 @@
   <% end %>
 </div>
 
-<% if @books.any? %>
-  <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
-    <% @books.each do |book| %>
-      <div class="col">
-        <%= link_to book, class: "text-decoration-none text-dark", data: { turbo_prefetch: false } do %>
-          <%= render book %>
-        <% end %>
-      </div>
-    <% end %>
-  </div>
-<% else %>
-  <div class="text-center text-muted py-5">
-    <i class="fasl fa-shelves-empty fa-3x mb-3 d-block opacity-50"></i>
-    <p class="fs-5">No books yet.</p>
-    <% if signed_in? %>
-      <%= link_to new_book_path, class: "btn btn-primary" do %>
-        <i class="fasl fa-plus me-1"></i>Add the first one
+<%# Without JS, the plain GET form below still works (real page loads, no client-side rendering). %>
+<noscript>
+  <%= form_with url: books_path, method: :get, class: "row g-2 mb-4" do |form| %>
+    <div class="col-sm-8 col-md-6">
+      <%= form.label :q, "Search", class: "visually-hidden" %>
+      <%= form.text_field :q, value: params[:q], placeholder: "Search by title or author...", class: "form-control" %>
+    </div>
+    <div class="col-sm-4 col-md-3">
+      <%= form.label :sort, "Sort by", class: "visually-hidden" %>
+      <%= form.select :sort, BooksController::SORT_OPTIONS.map { |key, opts| [opts[:label], key] }, {selected: @sort}, class: "form-select" %>
+    </div>
+    <div class="col-sm-auto">
+      <button type="submit" class="btn btn-outline-secondary">Search</button>
+    </div>
+  <% end %>
+
+  <% if @books.any? %>
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+      <% @books.each do |book| %>
+        <div class="col">
+          <%= link_to book, class: "text-decoration-none text-dark" do %>
+            <%= render book %>
+          <% end %>
+        </div>
       <% end %>
-    <% end %>
-  </div>
-<% end %>
+    </div>
+    <%== @pagy.series_nav("bootstrap") if @pagy.pages > 1 %>
+  <% else %>
+    <div class="text-center text-muted py-5">
+      <p class="fs-5">No books found.</p>
+    </div>
+  <% end %>
+</noscript>
+
+<div data-controller="catalog-browser"
+     data-catalog-browser-initial-value="<%= @catalog_json.to_json %>"
+     data-catalog-browser-query-value="<%= params[:q] %>">
+  <div data-catalog-browser-target="root"></div>
+</div>

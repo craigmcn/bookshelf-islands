@@ -1,0 +1,290 @@
+import { useEffect, useRef, useState } from "react"
+import DeleteReadingControl from "./DeleteReadingControl"
+
+interface ShelfReading {
+  id: number
+  book_title: string
+  book_author: string
+  book_path: string
+  status: string
+  status_label: string
+  rating: string | null
+  rating_stars: number | null
+  review: string | null
+  path: string
+  edit_path: string
+  can_edit: boolean
+  can_destroy: boolean
+}
+
+export interface ShelfPage {
+  readings: ShelfReading[]
+  sort: string
+  pagy: { page: number; pages: number; count: number }
+}
+
+const SORT_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: "recent", label: "Recently Updated" },
+  { value: "title", label: "Book Title" },
+  { value: "rating", label: "Rating (High to Low)" },
+]
+
+const STATUS_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: "want_to_read", label: "Want To Read" },
+  { value: "reading", label: "Reading" },
+  { value: "finished", label: "Finished" },
+]
+
+const RATING_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: "one", label: "One" },
+  { value: "two", label: "Two" },
+  { value: "three", label: "Three" },
+  { value: "four", label: "Four" },
+  { value: "five", label: "Five" },
+]
+
+const DEBOUNCE_MS = 300
+
+interface ShelfBrowserProps {
+  initial: ShelfPage
+  initialQuery: string
+  initialStatus: string
+  initialRating: string
+}
+
+export default function ShelfBrowser({ initial, initialQuery, initialStatus, initialRating }: ShelfBrowserProps) {
+  const [query, setQuery] = useState(initialQuery)
+  const [status, setStatus] = useState(initialStatus)
+  const [rating, setRating] = useState(initialRating)
+  const [sort, setSort] = useState(initial.sort)
+  const [page, setPage] = useState(initial.pagy.page)
+  const [data, setData] = useState<ShelfPage>(initial)
+  const [loading, setLoading] = useState(false)
+  const isFirstRender = useRef(true)
+
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false
+      return
+    }
+
+    const controller = new AbortController()
+    const timeout = setTimeout(() => {
+      setLoading(true)
+      const params = new URLSearchParams()
+      if (query.trim()) params.set("q", query.trim())
+      if (status) params.set("status", status)
+      if (rating) params.set("rating", rating)
+      params.set("sort", sort)
+      params.set("page", String(page))
+
+      fetch(`/readings.json?${params.toString()}`, {
+        signal: controller.signal,
+        headers: { Accept: "application/json" },
+      })
+        .then((response) => {
+          if (!response.ok) throw new Error(`Shelf search failed: ${response.status}`)
+          return response.json()
+        })
+        .then((result: ShelfPage) => setData(result))
+        .catch((error: unknown) => {
+          if ((error as { name?: string }).name !== "AbortError") {
+            setData({ readings: [], sort, pagy: { page: 1, pages: 1, count: 0 } })
+          }
+        })
+        .finally(() => setLoading(false))
+    }, DEBOUNCE_MS)
+
+    return () => {
+      clearTimeout(timeout)
+      controller.abort()
+    }
+  }, [query, status, rating, sort, page])
+
+  const resetToFirstPage = <T,>(setter: (value: T) => void) => (value: T) => {
+    setter(value)
+    setPage(1)
+  }
+
+  const handleQueryChange = resetToFirstPage(setQuery)
+  const handleStatusChange = resetToFirstPage(setStatus)
+  const handleRatingChange = resetToFirstPage(setRating)
+  const handleSortChange = resetToFirstPage(setSort)
+
+  const removeReading = (id: number) => {
+    setData((current) => ({
+      ...current,
+      readings: current.readings.filter((reading) => reading.id !== id),
+    }))
+  }
+
+  return (
+    <div>
+      <div className="row g-2 mb-4">
+        <div className="col-sm-6 col-md-4">
+          <label className="visually-hidden" htmlFor="shelf_q">
+            Search
+          </label>
+          <input
+            type="text"
+            id="shelf_q"
+            className="form-control"
+            placeholder="Search by title or author..."
+            autoComplete="off"
+            value={query}
+            onChange={(event) => handleQueryChange(event.target.value)}
+          />
+        </div>
+        <div className="col-sm-3 col-md-2">
+          <label className="visually-hidden" htmlFor="shelf_status">
+            Status
+          </label>
+          <select
+            id="shelf_status"
+            className="form-select"
+            value={status}
+            onChange={(event) => handleStatusChange(event.target.value)}
+          >
+            <option value="">Any status</option>
+            {STATUS_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="col-sm-3 col-md-2">
+          <label className="visually-hidden" htmlFor="shelf_rating">
+            Rating
+          </label>
+          <select
+            id="shelf_rating"
+            className="form-select"
+            value={rating}
+            onChange={(event) => handleRatingChange(event.target.value)}
+          >
+            <option value="">Any rating</option>
+            {RATING_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="col-sm-4 col-md-3">
+          <label className="visually-hidden" htmlFor="shelf_sort">
+            Sort by
+          </label>
+          <select
+            id="shelf_sort"
+            className="form-select"
+            value={sort}
+            onChange={(event) => handleSortChange(event.target.value)}
+          >
+            {SORT_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        {loading && (
+          <div className="col-auto d-flex align-items-center">
+            <div className="spinner-border spinner-border-sm text-secondary" role="status">
+              <span className="visually-hidden">Loading…</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {data.readings.length === 0 ? (
+        <div className="text-center text-muted py-5">
+          <p className="fs-5">No readings found.</p>
+        </div>
+      ) : (
+        <div className="table-responsive">
+          <table className="table table-hover align-middle">
+            <thead className="table-dark">
+              <tr>
+                <th>Book</th>
+                <th>Status</th>
+                <th>Rating</th>
+                <th>Review</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.readings.map((reading) => (
+                <tr key={reading.id}>
+                  <td>
+                    <a href={reading.book_path} className="text-decoration-none fw-semibold">
+                      {reading.book_title}
+                    </a>
+                  </td>
+                  <td>
+                    <span className={`badge badge-status-${reading.status.replace(/_/g, "-")}`}>
+                      {reading.status_label}
+                    </span>
+                  </td>
+                  <td>
+                    {reading.rating_stars ? (
+                      <>
+                        <span className="visually-hidden">{reading.rating}</span>
+                        {Array.from({ length: reading.rating_stars }).map((_, index) => (
+                          <i key={index} className="fasl fa-star text-warning" aria-hidden="true" />
+                        ))}
+                      </>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+                  <td className="text-muted">
+                    {reading.review && reading.review.length > 80
+                      ? `${reading.review.slice(0, 80)}...`
+                      : reading.review}
+                  </td>
+                  <td className="d-flex">
+                    {reading.can_edit && (
+                      <a href={reading.edit_path} className="btn btn-sm btn-outline-secondary">
+                        <i className="fasl fa-pen-to-square" />
+                      </a>
+                    )}
+                    {reading.can_destroy && (
+                      <span className="ms-1">
+                        <DeleteReadingControl readingUrl={reading.path} onDeleted={() => removeReading(reading.id)} />
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {data.pagy.pages > 1 && (
+        <nav aria-label="My Shelf pagination" className="mt-4 d-flex justify-content-center gap-2">
+          <button
+            type="button"
+            className="btn btn-outline-secondary btn-sm"
+            disabled={data.pagy.page <= 1}
+            onClick={() => setPage(data.pagy.page - 1)}
+          >
+            Previous
+          </button>
+          <span className="align-self-center text-muted small">
+            Page {data.pagy.page} of {data.pagy.pages}
+          </span>
+          <button
+            type="button"
+            className="btn btn-outline-secondary btn-sm"
+            disabled={data.pagy.page >= data.pagy.pages}
+            onClick={() => setPage(data.pagy.page + 1)}
+          >
+            Next
+          </button>
+        </nav>
+      )}
+    </div>
+  )
+}

@@ -7,30 +7,61 @@
   <% end %>
 </div>
 
-<% if @readings.any? %>
-  <div class="table-responsive">
-    <table class="table table-hover align-middle">
-      <thead class="table-dark">
-        <tr>
-          <th>Book</th>
-          <th>Status</th>
-          <th>Rating</th>
-          <th>Review</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        <% @readings.each do |reading| %>
-          <%= render reading %>
-        <% end %>
-      </tbody>
-    </table>
-  </div>
-<% else %>
-  <div class="text-center text-muted py-5">
-    <p class="fs-5">Your shelf is empty.</p>
-    <%= link_to new_reading_path, class: "btn btn-primary" do %>
-      <i class="fasl fa-plus me-1"></i>Log your first reading
-    <% end %>
-  </div>
-<% end %>
+<%# Without JS, the plain GET form below still works (real page loads, no client-side rendering). %>
+<noscript>
+  <%= form_with url: readings_path, method: :get, class: "row g-2 mb-4" do |form| %>
+    <div class="col-sm-6 col-md-4">
+      <%= form.label :q, "Search", class: "visually-hidden" %>
+      <%= form.text_field :q, value: params[:q], placeholder: "Search by title or author...", class: "form-control" %>
+    </div>
+    <div class="col-sm-3 col-md-2">
+      <%= form.label :status, "Status", class: "visually-hidden" %>
+      <%= form.select :status, Reading.statuses.keys.map { |s| [s.humanize, s] }, {include_blank: "Any status", selected: params[:status]}, class: "form-select" %>
+    </div>
+    <div class="col-sm-3 col-md-2">
+      <%= form.label :rating, "Rating", class: "visually-hidden" %>
+      <%= form.select :rating, Reading.ratings.keys.map { |r| [r.humanize, r] }, {include_blank: "Any rating", selected: params[:rating]}, class: "form-select" %>
+    </div>
+    <div class="col-sm-4 col-md-3">
+      <%= form.label :sort, "Sort by", class: "visually-hidden" %>
+      <%= form.select :sort, ReadingsController::SORT_OPTIONS.map { |key, opts| [opts[:label], key] }, {selected: @sort}, class: "form-select" %>
+    </div>
+    <div class="col-sm-auto">
+      <button type="submit" class="btn btn-outline-secondary">Filter</button>
+    </div>
+  <% end %>
+
+  <% if @readings.any? %>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead class="table-dark">
+          <tr>
+            <th>Book</th>
+            <th>Status</th>
+            <th>Rating</th>
+            <th>Review</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @readings.each do |reading| %>
+            <%= render reading %>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+    <%== @pagy.series_nav("bootstrap") if @pagy.pages > 1 %>
+  <% else %>
+    <div class="text-center text-muted py-5">
+      <p class="fs-5">No readings found.</p>
+    </div>
+  <% end %>
+</noscript>
+
+<div data-controller="shelf-browser"
+     data-shelf-browser-initial-value="<%= @shelf_json.to_json %>"
+     data-shelf-browser-query-value="<%= params[:q] %>"
+     data-shelf-browser-status-value="<%= params[:status] %>"
+     data-shelf-browser-rating-value="<%= params[:rating] %>">
+  <div data-shelf-browser-target="root"></div>
+</div>
