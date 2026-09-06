@@ -11,10 +11,16 @@ class BooksController < ApplicationController
 
   def index
     @books = policy_scope(Book).includes(:added_by)
+    @genre_tags = Tag.genre.order(:name)
 
     if params[:q].present?
       query = "%#{params[:q].strip}%"
       @books = @books.where("books.title ILIKE :q OR books.author ILIKE :q", q: query)
+    end
+
+    if params[:tag].present?
+      @tag = Tag.find_by(name: params[:tag].to_s.strip.downcase)
+      @books = @tag ? @books.joins(:tags).where(tags: {id: @tag.id}) : @books.none
     end
 
     @sort = SORT_OPTIONS.key?(params[:sort]) ? params[:sort] : "title"
@@ -75,13 +81,15 @@ class BooksController < ApplicationController
   end
 
   def book_params
-    params.expect(book: [:title, :author, :cover_url])
+    params.expect(book: [:title, :author, :cover_url, :tag_list])
   end
 
   def catalog_page_json
     {
       books: @books.map { |book| catalog_book_json(book) },
       sort: @sort,
+      tag: @tag&.name,
+      genre_tags: @genre_tags.map { |tag| {name: tag.name} },
       pagy: {page: @pagy.page, pages: @pagy.pages, count: @pagy.count}
     }
   end

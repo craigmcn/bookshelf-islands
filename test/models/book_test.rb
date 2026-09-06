@@ -12,4 +12,39 @@ class BookTest < ActiveSupport::TestCase
   test "invalid without author" do
     assert_not Book.new(title: "Test", added_by: users(:member)).valid?
   end
+
+  test "assigning tag_list creates and links tags, normalizing names" do
+    book = Book.create!(title: "Test", author: "Author", added_by: users(:member))
+    book.update!(tag_list: " Fantasy, coming-of-age , fantasy ")
+
+    assert_equal ["coming-of-age", "fantasy"], book.tags.order(:name).pluck(:name)
+  end
+
+  test "assigning tag_list reuses existing tags instead of duplicating them" do
+    book = Book.create!(title: "Test", author: "Author", added_by: users(:member))
+
+    assert_no_difference "Tag.count" do
+      book.update!(tag_list: tags(:one).name)
+    end
+    assert_equal [tags(:one)], book.tags
+  end
+
+  test "assigning an empty tag_list clears existing tags" do
+    book = books(:one) # already tagged with tags(:one) via the taggings fixture
+    book.update!(tag_list: "")
+
+    assert_empty book.tags
+  end
+
+  test "not assigning tag_list on update leaves existing tags untouched" do
+    book = books(:one) # already tagged with tags(:one) via the taggings fixture
+    book.update!(title: "New Title")
+
+    assert_equal [tags(:one)], book.reload.tags
+  end
+
+  test "tag_list reader returns comma-separated tag names when not assigned" do
+    book = books(:one) # already tagged with tags(:one) via the taggings fixture
+    assert_equal "fantasy", book.reload.tag_list
+  end
 end

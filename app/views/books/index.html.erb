@@ -12,6 +12,9 @@
 <%# Without JS, the plain GET form below still works (real page loads, no client-side rendering). %>
 <noscript>
   <%= form_with url: books_path, method: :get, class: "row g-2 mb-4" do |form| %>
+    <% if @tag %>
+      <%= form.hidden_field :tag, value: @tag.name %>
+    <% end %>
     <div class="col-sm-8 col-md-6">
       <%= form.label :q, "Search", class: "visually-hidden" %>
       <%= form.text_field :q, value: params[:q], placeholder: "Search by title or author...", class: "form-control" %>
@@ -22,6 +25,19 @@
     </div>
     <div class="col-sm-auto">
       <button type="submit" class="btn btn-outline-secondary">Search</button>
+    </div>
+  <% end %>
+
+  <% if @genre_tags.any? %>
+    <div class="d-flex flex-wrap align-items-center gap-1 mb-3">
+      <span class="text-muted small me-1">Browse by genre:</span>
+      <% @genre_tags.each do |tag| %>
+        <%= link_to tag.name, books_path(tag: tag.name, q: params[:q], sort: params[:sort]),
+              class: ["badge text-decoration-none", @tag == tag ? "text-bg-primary" : "text-bg-secondary"] %>
+      <% end %>
+      <% if @tag %>
+        <%= link_to "Clear tag filter", books_path(q: params[:q], sort: params[:sort]), class: "small ms-2" %>
+      <% end %>
     </div>
   <% end %>
 

@@ -9,9 +9,15 @@ interface CatalogBook {
   path: string
 }
 
+interface GenreTag {
+  name: string
+}
+
 export interface CatalogPage {
   books: CatalogBook[]
   sort: string
+  tag: string | null
+  genre_tags: GenreTag[]
   pagy: { page: number; pages: number; count: number }
 }
 
@@ -31,6 +37,7 @@ interface CatalogBrowserProps {
 export default function CatalogBrowser({ initial, initialQuery }: CatalogBrowserProps) {
   const [query, setQuery] = useState(initialQuery)
   const [sort, setSort] = useState(initial.sort)
+  const [tag, setTag] = useState(initial.tag ?? "")
   const [page, setPage] = useState(initial.pagy.page)
   const [data, setData] = useState<CatalogPage>(initial)
   const [loading, setLoading] = useState(false)
@@ -47,6 +54,7 @@ export default function CatalogBrowser({ initial, initialQuery }: CatalogBrowser
       setLoading(true)
       const params = new URLSearchParams()
       if (query.trim()) params.set("q", query.trim())
+      if (tag) params.set("tag", tag)
       params.set("sort", sort)
       params.set("page", String(page))
 
@@ -61,7 +69,7 @@ export default function CatalogBrowser({ initial, initialQuery }: CatalogBrowser
         .then((result: CatalogPage) => setData(result))
         .catch((error: unknown) => {
           if ((error as { name?: string }).name !== "AbortError") {
-            setData({ books: [], sort, pagy: { page: 1, pages: 1, count: 0 } })
+            setData({ books: [], sort, tag: tag || null, genre_tags: data.genre_tags, pagy: { page: 1, pages: 1, count: 0 } })
           }
         })
         .finally(() => setLoading(false))
@@ -71,7 +79,7 @@ export default function CatalogBrowser({ initial, initialQuery }: CatalogBrowser
       clearTimeout(timeout)
       controller.abort()
     }
-  }, [query, sort, page])
+  }, [query, sort, tag, page])
 
   const handleQueryChange = (value: string) => {
     setQuery(value)
@@ -80,6 +88,11 @@ export default function CatalogBrowser({ initial, initialQuery }: CatalogBrowser
 
   const handleSortChange = (value: string) => {
     setSort(value)
+    setPage(1)
+  }
+
+  const handleTagChange = (value: string) => {
+    setTag(value)
     setPage(1)
   }
 
@@ -125,6 +138,27 @@ export default function CatalogBrowser({ initial, initialQuery }: CatalogBrowser
           </div>
         )}
       </div>
+
+      {data.genre_tags.length > 0 && (
+        <div className="d-flex flex-wrap align-items-center gap-1 mb-3">
+          <span className="text-muted small me-1">Browse by genre:</span>
+          {data.genre_tags.map((genreTag) => (
+            <button
+              key={genreTag.name}
+              type="button"
+              className={`badge border-0 ${tag === genreTag.name ? "text-bg-primary" : "text-bg-secondary"}`}
+              onClick={() => handleTagChange(tag === genreTag.name ? "" : genreTag.name)}
+            >
+              {genreTag.name}
+            </button>
+          ))}
+          {tag && (
+            <button type="button" className="btn btn-link btn-sm p-0 ms-2" onClick={() => handleTagChange("")}>
+              Clear tag filter
+            </button>
+          )}
+        </div>
+      )}
 
       {data.books.length === 0 ? (
         <div className="text-center text-muted py-5">
