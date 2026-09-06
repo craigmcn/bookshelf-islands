@@ -24,6 +24,33 @@ test.describe("Books", () => {
     await expect(titles.first()).toHaveText("The Great Gatsby"); // F. Scott Fitzgerald sorts before George Orwell
   });
 
+  test("anyone can browse the catalog by genre tag", async ({ page }) => {
+    await page.goto("/books");
+    await page.getByRole("button", { name: "fantasy" }).click();
+
+    await expect(page.getByRole("link", { name: "The Great Gatsby" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "1984" })).toHaveCount(0);
+
+    await page.getByRole("button", { name: "Clear tag filter" }).click();
+    await expect(page.getByRole("link", { name: "1984" })).toBeVisible();
+  });
+
+  test("member can tag a book with genres when adding it", async ({ page }) => {
+    await signIn(page, users.member);
+    await page.goto("/books/new");
+
+    await page.getByLabel("Search for a Book").fill("hobbit");
+    await page.getByRole("button", { name: /The Hobbit/ }).click();
+
+    await page.getByLabel("Genres").fill("adventure");
+    await page.keyboard.press("Enter");
+    await expect(page.getByText("adventure", { exact: true })).toBeVisible();
+
+    await page.getByRole("button", { name: "Create Book" }).click();
+    await expect(page).toHaveURL(/\/books\/\d+$/);
+    await expect(page.getByRole("link", { name: "adventure" })).toBeVisible();
+  });
+
   test("member can search Open Library and add a book", async ({ page }) => {
     await signIn(page, users.member);
     await page.goto("/books/new");

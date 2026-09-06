@@ -182,10 +182,14 @@ per-test fixtures — there's no transaction rollback between Playwright tests).
 that change fixture-owned state revert it before finishing (see the role-edit test in
 `e2e/admin.spec.ts`) so re-running the suite against the same DB stays idempotent.
 
-Note: `config/database.yml` still names the test/dev/prod databases
-`community_bookshelf_*` (inherited from the fork) — this repo and `community_bookshelf`
-share the same local Postgres databases, so don't run both repos' `bin/e2e_server` at
-the same time locally.
+`config/database.yml`'s dev/test databases are named `bookshelf_islands_*` — separate
+from `community_bookshelf`'s own `community_bookshelf_*` databases on the same local
+Postgres server. They were briefly named `community_bookshelf_*` (inherited from the
+fork) until 2026-09-06, when running `bin/rails test` here was found to wipe
+`community_bookshelf_test` via `maintain_test_schema!` (it reset the shared database to
+this repo's much smaller schema). Production still targets `community_bookshelf_production`
+deliberately — the drop-in-replacement goal means eventually deploying against the same
+production data, not a copy of it.
 
 **Known gap:** `RatingPicker` renders into an empty `<div>` with a hidden field that
 only gets a value once React mounts — unlike `community_bookshelf`'s native `<select>`,

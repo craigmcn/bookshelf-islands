@@ -18,3 +18,6 @@ application.register("catalog-browser", CatalogBrowserController)
 
 import ShelfBrowserController from "./shelf_browser_controller"
 application.register("shelf-browser", ShelfBrowserController)
+
+import TagInputController from "./tag_input_controller"
+application.register("tag-input", TagInputController)

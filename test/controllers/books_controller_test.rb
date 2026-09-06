@@ -32,6 +32,35 @@ class BooksControllerTest < ActionDispatch::IntegrationTest
     assert_equal "title", JSON.parse(response.body)["sort"]
   end
 
+  test "catalog json filters by tag" do
+    @book.update!(tag_list: tags(:one).name)
+
+    get books_url(tag: tags(:one).name, format: :json)
+    body = JSON.parse(response.body)
+    assert_equal [@book.title], body["books"].pluck("title")
+    assert_equal tags(:one).name, body["tag"]
+  end
+
+  test "catalog json returns no books for an unknown tag" do
+    get books_url(tag: "no-such-tag", format: :json)
+    body = JSON.parse(response.body)
+    assert_empty body["books"]
+    assert_nil body["tag"]
+  end
+
+  test "catalog json includes the genre tag list for browsing" do
+    get books_url(format: :json)
+    body = JSON.parse(response.body)
+    assert_equal [tags(:one).name], body["genre_tags"].pluck("name")
+  end
+
+  test "member can create a book with genre tags" do
+    sign_in_as users(:member)
+    post books_url, params: {book: {title: "New Book", author: "Some Author", added_by_id: users(:member).id, tag_list: "sci-fi, adventure"}}
+
+    assert_equal ["adventure", "sci-fi"], Book.last.tags.order(:name).pluck(:name)
+  end
+
   test "catalog json paginates results" do
     14.times { |n| Book.create!(title: "Extra #{n}", author: "Someone", added_by: users(:member)) }
 

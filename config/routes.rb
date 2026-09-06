@@ -2,6 +2,7 @@ Rails.application.routes.draw do
   resources :readings
   resources :books
   get "book_search", to: "book_search#index"
+  resources :tags, only: [:index]
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 
   get "up" => "rails/health#show", :as => :rails_health_check
