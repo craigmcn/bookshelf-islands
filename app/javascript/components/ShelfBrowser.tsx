@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react"
 import DeleteReadingControl from "./DeleteReadingControl"
+import RereadControl from "./RereadControl"
 
-interface ShelfReading {
+export interface ShelfReading {
   id: number
+  book_id: number
   book_title: string
   book_author: string
   book_path: string
@@ -115,6 +117,13 @@ export default function ShelfBrowser({ initial, initialQuery, initialStatus, ini
     setData((current) => ({
       ...current,
       readings: current.readings.filter((reading) => reading.id !== id),
+    }))
+  }
+
+  const addReading = (reading: ShelfReading) => {
+    setData((current) => ({
+      ...current,
+      readings: [reading, ...current.readings],
     }))
   }
 
@@ -243,7 +252,12 @@ export default function ShelfBrowser({ initial, initialQuery, initialStatus, ini
                       ? `${reading.review.slice(0, 80)}...`
                       : reading.review}
                   </td>
-                  <td className="d-flex">
+                  <td className="d-flex align-items-center">
+                    {reading.status === "finished" && (
+                      <span className="me-1">
+                        <RereadControl bookId={reading.book_id} onCreated={addReading} />
+                      </span>
+                    )}
                     {reading.can_edit && (
                       <a href={reading.edit_path} className="btn btn-sm btn-outline-secondary">
                         <i className="fasl fa-pen-to-square" />
