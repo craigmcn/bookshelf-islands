@@ -18,12 +18,38 @@
                         when "want_to_read" then "fa-bookmark"
                         when "reading"      then "fa-book-open-reader"
                         when "finished"     then "fa-circle-check"
+                        when "dnf"          then "fa-circle-xmark"
                         end
         %>
         <span class="badge badge-status-<%= @reading.status.tr('_', '-') %>">
-          <i class="fasl <%= status_icon %> me-1"></i><%= @reading.status.humanize %>
+          <i class="fasl <%= status_icon %> me-1"></i><%= @reading.status_label %>
         </span>
       </dd>
+
+      <% if @reading.format.present? %>
+        <dt class="col-sm-2">Format</dt>
+        <dd class="col-sm-10"><%= @reading.format.humanize %></dd>
+      <% end %>
+
+      <% if @reading.started_on.present? || @reading.finished_on.present? %>
+        <dt class="col-sm-2">Dates</dt>
+        <dd class="col-sm-10">
+          <% if @reading.started_on.present? %>Started <%= @reading.started_on.to_fs(:long) %><% end %>
+          <% if @reading.started_on.present? && @reading.finished_on.present? %> &middot; <% end %>
+          <% if @reading.finished_on.present? %>Finished <%= @reading.finished_on.to_fs(:long) %><% end %>
+        </dd>
+      <% end %>
+
+      <% if @reading.progress_percent.present? %>
+        <dt class="col-sm-2">Progress</dt>
+        <dd class="col-sm-10">
+          <div class="progress" style="height: 0.5rem; max-width: 300px;">
+            <div class="progress-bar" role="progressbar" style="width: <%= @reading.progress_percent %>%"
+                 aria-valuenow="<%= @reading.progress_percent %>" aria-valuemin="0" aria-valuemax="100"></div>
+          </div>
+          <span class="text-muted small"><%= @reading.progress_percent %>%</span>
+        </dd>
+      <% end %>
 
       <dt class="col-sm-2">Rating</dt>
       <dd class="col-sm-10">
@@ -39,7 +65,12 @@
 
       <% if @reading.review.present? %>
         <dt class="col-sm-2">Review</dt>
-        <dd class="col-sm-10"><%= @reading.review %></dd>
+        <dd class="col-sm-10">
+          <%= @reading.review %>
+          <span class="badge <%= @reading.is_review_public? ? "text-bg-secondary" : "text-bg-warning" %> ms-2">
+            <%= @reading.is_review_public? ? "Public" : "Private" %>
+          </span>
+        </dd>
       <% end %>
     </dl>
 
