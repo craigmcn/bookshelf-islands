@@ -21,3 +21,6 @@ application.register("shelf-browser", ShelfBrowserController)
 
 import TagInputController from "./tag_input_controller"
 application.register("tag-input", TagInputController)
+
+import ShelfPickerController from "./shelf_picker_controller"
+application.register("shelf-picker", ShelfPickerController)
