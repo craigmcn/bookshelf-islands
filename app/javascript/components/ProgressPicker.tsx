@@ -25,7 +25,9 @@ export default function ProgressPicker({ initialValue, onChange }: ProgressPicke
             className="progress-bar"
             role="progressbar"
             style={{ width: `${displayPercent}%` }}
-            aria-valuenow={displayPercent}
+            aria-label="Reading progress"
+            aria-valuenow={percent ?? undefined}
+            aria-valuetext={percent === null ? "Not set" : undefined}
             aria-valuemin={0}
             aria-valuemax={100}
           />
