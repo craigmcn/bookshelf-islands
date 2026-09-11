@@ -21,3 +21,9 @@ application.register("shelf-browser", ShelfBrowserController)
 
 import TagInputController from "./tag_input_controller"
 application.register("tag-input", TagInputController)
+
+import ProgressController from "./progress_controller"
+application.register("progress", ProgressController)
+
+import PrivacyToggleController from "./privacy_toggle_controller"
+application.register("privacy-toggle", PrivacyToggleController)

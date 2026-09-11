@@ -3,6 +3,7 @@ import DeleteReadingControl from "./DeleteReadingControl"
 
 interface ShelfReading {
   id: number
+  book_id: number
   book_title: string
   book_author: string
   book_path: string
@@ -10,6 +11,7 @@ interface ShelfReading {
   status_label: string
   rating: string | null
   rating_stars: number | null
+  progress_percent: number | null
   review: string | null
   path: string
   edit_path: string
@@ -33,6 +35,7 @@ const STATUS_OPTIONS: Array<{ value: string; label: string }> = [
   { value: "want_to_read", label: "Want To Read" },
   { value: "reading", label: "Reading" },
   { value: "finished", label: "Finished" },
+  { value: "dnf", label: "DNF" },
 ]
 
 const RATING_OPTIONS: Array<{ value: string; label: string }> = [
@@ -209,6 +212,7 @@ export default function ShelfBrowser({ initial, initialQuery, initialStatus, ini
                 <th>Book</th>
                 <th>Status</th>
                 <th>Rating</th>
+                <th>Progress</th>
                 <th>Review</th>
                 <th></th>
               </tr>
@@ -234,6 +238,13 @@ export default function ShelfBrowser({ initial, initialQuery, initialStatus, ini
                           <i key={index} className="fasl fa-star text-warning" aria-hidden="true" />
                         ))}
                       </>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+                  <td>
+                    {reading.progress_percent != null ? (
+                      <span className="text-muted small">{reading.progress_percent}%</span>
                     ) : (
                       "—"
                     )}

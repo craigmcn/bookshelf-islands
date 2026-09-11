@@ -85,7 +85,7 @@ class ReadingsController < ApplicationController
   end
 
   def reading_params
-    params.expect(reading: [:book_id, :status, :rating, :review])
+    params.expect(reading: [:book_id, :status, :rating, :review, :started_on, :finished_on, :progress_percent, :format, :is_review_public])
   end
 
   def shelf_page_json
@@ -99,13 +99,15 @@ class ReadingsController < ApplicationController
   def shelf_reading_json(reading)
     {
       id: reading.id,
+      book_id: reading.book_id,
       book_title: reading.book.title,
       book_author: reading.book.author,
       book_path: book_path(reading.book),
       status: reading.status,
-      status_label: reading.status.humanize,
+      status_label: reading.status_label,
       rating: reading.rating,
       rating_stars: reading.rating? ? Reading.ratings[reading.rating] : nil,
+      progress_percent: reading.progress_percent,
       review: reading.review,
       path: reading_path(reading),
       edit_path: edit_reading_path(reading),

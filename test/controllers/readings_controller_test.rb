@@ -76,6 +76,36 @@ class ReadingsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "finished", @reading.reload.status
   end
 
+  test "member can set tracking fields when creating a reading" do
+    sign_in_as users(:member)
+    post readings_url, params: {reading: {
+      book_id: books(:two).id, status: :reading, format: :ebook,
+      started_on: "2026-01-05", progress_percent: 42, is_review_public: "false"
+    }}
+
+    reading = Reading.last
+    assert_equal "ebook", reading.format
+    assert_equal Date.new(2026, 1, 5), reading.started_on
+    assert_equal 42, reading.progress_percent
+    assert_not reading.is_review_public?
+  end
+
+  test "member can mark a reading as DNF" do
+    sign_in_as users(:member)
+    patch reading_url(@reading), params: {reading: {status: :dnf, book_id: @reading.book_id}}
+    assert_equal "dnf", @reading.reload.status
+  end
+
+  test "shelf json includes progress_percent" do
+    sign_in_as users(:member)
+    @reading.update!(progress_percent: 60)
+
+    get readings_url(format: :json)
+    body = JSON.parse(response.body)
+    reading_json = body["readings"].find { |r| r["id"] == @reading.id }
+    assert_equal 60, reading_json["progress_percent"]
+  end
+
   test "member cannot destroy a reading" do
     sign_in_as users(:member)
     assert_no_difference "Reading.count" do
