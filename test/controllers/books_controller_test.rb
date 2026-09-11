@@ -79,6 +79,17 @@ class BooksControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "signed-in member sees their lists and which ones contain the book (shelf picker island)" do
+    sign_in_as users(:member)
+    ShelfBook.create!(shelf: shelves(:one), book: @book)
+    Shelf.create!(user: users(:member), name: "2026 TBR")
+
+    get book_url(@book)
+    assert_response :success
+    assert_match(/#{shelves(:one).name}/, response.body)
+    assert_match(/2026 TBR/, response.body)
+  end
+
   # Auth wall
   test "guest is redirected to sign in for new" do
     get new_book_url

@@ -38,6 +38,7 @@ class BooksController < ApplicationController
   def show
     authorize @book
     @user_reading = current_user&.readings&.find_by(book: @book)
+    @shelf_picker_json = shelf_picker_json
   end
 
   def new
@@ -103,5 +104,14 @@ class BooksController < ApplicationController
       added_by_email: book.added_by.email,
       path: book_path(book)
     }
+  end
+
+  def shelf_picker_json
+    return [] unless current_user
+
+    shelf_book_ids = ShelfBook.where(shelf: current_user.shelves, book: @book).pluck(:shelf_id, :id).to_h
+    current_user.shelves.order(:name).map do |shelf|
+      {id: shelf.id, name: shelf.name, shelf_book_id: shelf_book_ids[shelf.id]}
+    end
   end
 end
