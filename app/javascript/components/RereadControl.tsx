@@ -1,9 +1,8 @@
 import { useState } from "react"
-import type { ShelfReading } from "./ShelfBrowser"
 
 interface RereadControlProps {
   bookId: number
-  onCreated: (reading: ShelfReading) => void
+  onCreated: () => void
 }
 
 type Status = "idle" | "creating" | "error"
@@ -22,8 +21,7 @@ export default function RereadControl({ bookId, onCreated }: RereadControlProps)
         body: JSON.stringify({reading: {book_id: bookId, status: "want_to_read"}}),
       })
       if (response.status !== 201) throw new Error(`Start a re-read failed: ${response.status}`)
-      const reading: ShelfReading = await response.json()
-      onCreated(reading)
+      onCreated()
       setStatus("idle")
     } catch {
       setStatus("error")

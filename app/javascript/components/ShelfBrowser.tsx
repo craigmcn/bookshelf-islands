@@ -64,6 +64,32 @@ export default function ShelfBrowser({ initial, initialQuery, initialStatus, ini
   const [loading, setLoading] = useState(false)
   const isFirstRender = useRef(true)
 
+  const fetchShelf = (signal?: AbortSignal) => {
+    setLoading(true)
+    const params = new URLSearchParams()
+    if (query.trim()) params.set("q", query.trim())
+    if (status) params.set("status", status)
+    if (rating) params.set("rating", rating)
+    params.set("sort", sort)
+    params.set("page", String(page))
+
+    return fetch(`/readings.json?${params.toString()}`, {
+      signal,
+      headers: { Accept: "application/json" },
+    })
+      .then((response) => {
+        if (!response.ok) throw new Error(`Shelf search failed: ${response.status}`)
+        return response.json()
+      })
+      .then((result: ShelfPage) => setData(result))
+      .catch((error: unknown) => {
+        if ((error as { name?: string }).name !== "AbortError") {
+          setData({ readings: [], sort, pagy: { page: 1, pages: 1, count: 0 } })
+        }
+      })
+      .finally(() => setLoading(false))
+  }
+
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false
@@ -71,31 +97,7 @@ export default function ShelfBrowser({ initial, initialQuery, initialStatus, ini
     }
 
     const controller = new AbortController()
-    const timeout = setTimeout(() => {
-      setLoading(true)
-      const params = new URLSearchParams()
-      if (query.trim()) params.set("q", query.trim())
-      if (status) params.set("status", status)
-      if (rating) params.set("rating", rating)
-      params.set("sort", sort)
-      params.set("page", String(page))
-
-      fetch(`/readings.json?${params.toString()}`, {
-        signal: controller.signal,
-        headers: { Accept: "application/json" },
-      })
-        .then((response) => {
-          if (!response.ok) throw new Error(`Shelf search failed: ${response.status}`)
-          return response.json()
-        })
-        .then((result: ShelfPage) => setData(result))
-        .catch((error: unknown) => {
-          if ((error as { name?: string }).name !== "AbortError") {
-            setData({ readings: [], sort, pagy: { page: 1, pages: 1, count: 0 } })
-          }
-        })
-        .finally(() => setLoading(false))
-    }, DEBOUNCE_MS)
+    const timeout = setTimeout(() => fetchShelf(controller.signal), DEBOUNCE_MS)
 
     return () => {
       clearTimeout(timeout)
@@ -117,13 +119,6 @@ export default function ShelfBrowser({ initial, initialQuery, initialStatus, ini
     setData((current) => ({
       ...current,
       readings: current.readings.filter((reading) => reading.id !== id),
-    }))
-  }
-
-  const addReading = (reading: ShelfReading) => {
-    setData((current) => ({
-      ...current,
-      readings: [reading, ...current.readings],
     }))
   }
 
@@ -255,7 +250,7 @@ export default function ShelfBrowser({ initial, initialQuery, initialStatus, ini
                   <td className="d-flex align-items-center">
                     {reading.status === "finished" && (
                       <span className="me-1">
-                        <RereadControl bookId={reading.book_id} onCreated={addReading} />
+                        <RereadControl bookId={reading.book_id} onCreated={() => fetchShelf()} />
                       </span>
                     )}
                     {reading.can_edit && (
