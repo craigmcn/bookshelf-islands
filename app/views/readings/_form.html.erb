@@ -18,8 +18,25 @@
 
   <div class="mb-3">
     <%= form.label :status, class: "form-label" %>
-    <%= form.select :status, Reading.statuses.keys.map { |s| [s.humanize, s] },
+    <%= form.select :status, Reading.status_options,
           { prompt: "Select a status" }, { class: "form-select" } %>
+  </div>
+
+  <div class="mb-3">
+    <%= form.label :format, class: "form-label" %>
+    <%= form.select :format, Reading.formats.keys.map { |f| [f.humanize, f] },
+          { include_blank: "Not specified" }, { class: "form-select" } %>
+  </div>
+
+  <div class="row mb-3">
+    <div class="col">
+      <%= form.label :started_on, "Started", class: "form-label" %>
+      <%= form.date_field :started_on, class: "form-control" %>
+    </div>
+    <div class="col">
+      <%= form.label :finished_on, "Finished", class: "form-label" %>
+      <%= form.date_field :finished_on, class: "form-control" %>
+    </div>
   </div>
 
   <div class="mb-3" data-controller="rating"
@@ -29,9 +46,20 @@
     <div data-rating-target="root"></div>
   </div>
 
+  <div class="mb-3" data-controller="progress">
+    <%= form.label :progress_percent, "Progress", class: "form-label d-block" %>
+    <%= form.hidden_field :progress_percent, data: { progress_target: "input" } %>
+    <div data-progress-target="root"></div>
+  </div>
+
   <div class="mb-3">
     <%= form.label :review, class: "form-label" %>
     <%= form.textarea :review, class: "form-control", rows: 4, placeholder: "What did you think?" %>
+  </div>
+
+  <div class="mb-3" data-controller="privacy-toggle">
+    <%= form.hidden_field :is_review_public, data: { privacy_toggle_target: "input" } %>
+    <div data-privacy-toggle-target="root"></div>
   </div>
 
   <div class="d-flex gap-2">

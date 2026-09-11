@@ -69,11 +69,65 @@ class ReadingsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to reading_url(Reading.last)
   end
 
+  test "member can start a re-read via JSON (re-read island)" do
+    sign_in_as users(:member)
+    @reading.update!(status: :finished)
+
+    assert_difference "Reading.count" do
+      post readings_url, params: {reading: {book_id: @reading.book_id, status: "want_to_read"}}, as: :json
+    end
+
+    assert_response :created
+    body = JSON.parse(response.body)
+    assert_equal Reading.last.id, body["id"]
+    assert_equal "want_to_read", body["status"]
+    assert_equal @reading.book_id, body["book_id"]
+  end
+
+  test "starting a re-read does not require the earlier reading to be removed" do
+    sign_in_as users(:member)
+    @reading.update!(status: :finished)
+
+    post readings_url, params: {reading: {book_id: @reading.book_id, status: "want_to_read"}}, as: :json
+
+    assert_equal 2, Reading.where(user: users(:member), book: @reading.book).count
+  end
+
   test "member can update their own reading" do
     sign_in_as users(:member)
     patch reading_url(@reading), params: {reading: {status: :finished, book_id: @reading.book_id}}
     assert_redirected_to reading_url(@reading)
     assert_equal "finished", @reading.reload.status
+  end
+
+  test "member can set tracking fields when creating a reading" do
+    sign_in_as users(:member)
+    post readings_url, params: {reading: {
+      book_id: books(:two).id, status: :reading, format: :ebook,
+      started_on: "2026-01-05", progress_percent: 42, is_review_public: "false"
+    }}
+
+    reading = Reading.last
+    assert_equal "ebook", reading.format
+    assert_equal Date.new(2026, 1, 5), reading.started_on
+    assert_equal 42, reading.progress_percent
+    assert_not reading.is_review_public?
+  end
+
+  test "member can mark a reading as DNF" do
+    sign_in_as users(:member)
+    patch reading_url(@reading), params: {reading: {status: :dnf, book_id: @reading.book_id}}
+    assert_equal "dnf", @reading.reload.status
+  end
+
+  test "shelf json includes progress_percent" do
+    sign_in_as users(:member)
+    @reading.update!(progress_percent: 60)
+
+    get readings_url(format: :json)
+    body = JSON.parse(response.body)
+    reading_json = body["readings"].find { |r| r["id"] == @reading.id }
+    assert_equal 60, reading_json["progress_percent"]
   end
 
   test "member cannot destroy a reading" do

@@ -53,10 +53,14 @@ class ReadingsController < ApplicationController
     @reading = Reading.new(reading_params.merge(user_id: current_user.id))
     authorize @reading
 
-    if @reading.save
-      redirect_to @reading, notice: "Reading was successfully created."
-    else
-      render :new, status: :unprocessable_content
+    respond_to do |format|
+      if @reading.save
+        format.html { redirect_to @reading, notice: "Reading was successfully created." }
+        format.json { render json: shelf_reading_json(@reading), status: :created }
+      else
+        format.html { render :new, status: :unprocessable_content }
+        format.json { render json: {errors: @reading.errors.full_messages}, status: :unprocessable_content }
+      end
     end
   end
 
@@ -85,7 +89,7 @@ class ReadingsController < ApplicationController
   end
 
   def reading_params
-    params.expect(reading: [:book_id, :status, :rating, :review])
+    params.expect(reading: [:book_id, :status, :rating, :review, :started_on, :finished_on, :progress_percent, :format, :is_review_public])
   end
 
   def shelf_page_json
@@ -99,13 +103,15 @@ class ReadingsController < ApplicationController
   def shelf_reading_json(reading)
     {
       id: reading.id,
+      book_id: reading.book_id,
       book_title: reading.book.title,
       book_author: reading.book.author,
       book_path: book_path(reading.book),
       status: reading.status,
-      status_label: reading.status.humanize,
+      status_label: reading.status_label,
       rating: reading.rating,
       rating_stars: reading.rating? ? Reading.ratings[reading.rating] : nil,
+      progress_percent: reading.progress_percent,
       review: reading.review,
       path: reading_path(reading),
       edit_path: edit_reading_path(reading),

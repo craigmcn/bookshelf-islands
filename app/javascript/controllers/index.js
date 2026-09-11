@@ -24,3 +24,9 @@ application.register("tag-input", TagInputController)
 
 import ShelfPickerController from "./shelf_picker_controller"
 application.register("shelf-picker", ShelfPickerController)
+
+import ProgressController from "./progress_controller"
+application.register("progress", ProgressController)
+
+import PrivacyToggleController from "./privacy_toggle_controller"
+application.register("privacy-toggle", PrivacyToggleController)

@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react"
 import DeleteReadingControl from "./DeleteReadingControl"
+import RereadControl from "./RereadControl"
 
-interface ShelfReading {
+export interface ShelfReading {
   id: number
+  book_id: number
   book_title: string
   book_author: string
   book_path: string
@@ -10,6 +12,7 @@ interface ShelfReading {
   status_label: string
   rating: string | null
   rating_stars: number | null
+  progress_percent: number | null
   review: string | null
   path: string
   edit_path: string
@@ -33,6 +36,7 @@ const STATUS_OPTIONS: Array<{ value: string; label: string }> = [
   { value: "want_to_read", label: "Want To Read" },
   { value: "reading", label: "Reading" },
   { value: "finished", label: "Finished" },
+  { value: "dnf", label: "DNF" },
 ]
 
 const RATING_OPTIONS: Array<{ value: string; label: string }> = [
@@ -62,6 +66,32 @@ export default function ShelfBrowser({ initial, initialQuery, initialStatus, ini
   const [loading, setLoading] = useState(false)
   const isFirstRender = useRef(true)
 
+  const fetchShelf = (signal?: AbortSignal) => {
+    setLoading(true)
+    const params = new URLSearchParams()
+    if (query.trim()) params.set("q", query.trim())
+    if (status) params.set("status", status)
+    if (rating) params.set("rating", rating)
+    params.set("sort", sort)
+    params.set("page", String(page))
+
+    return fetch(`/readings.json?${params.toString()}`, {
+      signal,
+      headers: { Accept: "application/json" },
+    })
+      .then((response) => {
+        if (!response.ok) throw new Error(`Shelf search failed: ${response.status}`)
+        return response.json()
+      })
+      .then((result: ShelfPage) => setData(result))
+      .catch((error: unknown) => {
+        if ((error as { name?: string }).name !== "AbortError") {
+          setData({ readings: [], sort, pagy: { page: 1, pages: 1, count: 0 } })
+        }
+      })
+      .finally(() => setLoading(false))
+  }
+
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false
@@ -69,31 +99,7 @@ export default function ShelfBrowser({ initial, initialQuery, initialStatus, ini
     }
 
     const controller = new AbortController()
-    const timeout = setTimeout(() => {
-      setLoading(true)
-      const params = new URLSearchParams()
-      if (query.trim()) params.set("q", query.trim())
-      if (status) params.set("status", status)
-      if (rating) params.set("rating", rating)
-      params.set("sort", sort)
-      params.set("page", String(page))
-
-      fetch(`/readings.json?${params.toString()}`, {
-        signal: controller.signal,
-        headers: { Accept: "application/json" },
-      })
-        .then((response) => {
-          if (!response.ok) throw new Error(`Shelf search failed: ${response.status}`)
-          return response.json()
-        })
-        .then((result: ShelfPage) => setData(result))
-        .catch((error: unknown) => {
-          if ((error as { name?: string }).name !== "AbortError") {
-            setData({ readings: [], sort, pagy: { page: 1, pages: 1, count: 0 } })
-          }
-        })
-        .finally(() => setLoading(false))
-    }, DEBOUNCE_MS)
+    const timeout = setTimeout(() => fetchShelf(controller.signal), DEBOUNCE_MS)
 
     return () => {
       clearTimeout(timeout)
@@ -209,6 +215,7 @@ export default function ShelfBrowser({ initial, initialQuery, initialStatus, ini
                 <th>Book</th>
                 <th>Status</th>
                 <th>Rating</th>
+                <th>Progress</th>
                 <th>Review</th>
                 <th></th>
               </tr>
@@ -238,12 +245,24 @@ export default function ShelfBrowser({ initial, initialQuery, initialStatus, ini
                       "—"
                     )}
                   </td>
+                  <td>
+                    {reading.progress_percent != null ? (
+                      <span className="text-muted small">{reading.progress_percent}%</span>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
                   <td className="text-muted">
                     {reading.review && reading.review.length > 80
                       ? `${reading.review.slice(0, 80)}...`
                       : reading.review}
                   </td>
-                  <td className="d-flex">
+                  <td className="d-flex align-items-center">
+                    {reading.status === "finished" && (
+                      <span className="me-1">
+                        <RereadControl bookId={reading.book_id} onCreated={() => fetchShelf()} />
+                      </span>
+                    )}
                     {reading.can_edit && (
                       <a href={reading.edit_path} className="btn btn-sm btn-outline-secondary">
                         <i className="fasl fa-pen-to-square" />
