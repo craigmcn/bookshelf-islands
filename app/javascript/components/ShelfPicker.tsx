@@ -41,7 +41,7 @@ export default function ShelfPicker({ bookId, initialShelves }: ShelfPickerProps
         setShelves((current) => current.map((s) => (s.id === shelf.id ? {...s, shelf_book_id: created.id} : s)))
       }
     } catch {
-      // Leave shelf state as it was — the button just stops spinning, ready to retry.
+      // Leave shelf state as it was — the button just re-enables, ready to retry.
     } finally {
       setBusyId(null)
     }
@@ -75,6 +75,7 @@ export default function ShelfPicker({ bookId, initialShelves }: ShelfPickerProps
               type="button"
               className="dropdown-item d-flex justify-content-between align-items-center gap-3"
               disabled={busyId === shelf.id}
+              aria-pressed={!!shelf.shelf_book_id}
               onClick={() => toggle(shelf)}
             >
               {shelf.name}

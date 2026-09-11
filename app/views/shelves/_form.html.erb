@@ -1,7 +1,7 @@
 <%= form_with(model: shelf) do |form| %>
   <% if shelf.errors.any? %>
     <div class="alert alert-danger">
-      <strong><%= pluralize(shelf.errors.count, "error") %> prevented this shelf from being saved:</strong>
+      <strong><%= pluralize(shelf.errors.count, "error") %> prevented this list from being saved:</strong>
       <ul class="mb-0 mt-1">
         <% shelf.errors.each do |error| %>
           <li><%= error.full_message %></li>
@@ -16,7 +16,7 @@
   </div>
 
   <div class="d-flex gap-2">
-    <%= form.submit class: "btn btn-primary" %>
+    <%= form.submit(shelf.new_record? ? "Create List" : "Update List", class: "btn btn-primary") %>
     <%= link_to "Cancel", shelves_path, class: "btn btn-outline-secondary" %>
   </div>
 <% end %>

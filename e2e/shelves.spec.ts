@@ -12,7 +12,7 @@ test.describe("Shelves (Lists)", () => {
     await signIn(page, users.member);
     await page.goto("/shelves/new");
     await page.getByLabel("Name").fill("2026 TBR");
-    await page.getByRole("button", { name: "Create Shelf" }).click();
+    await page.getByRole("button", { name: "Create List" }).click();
     await expect(page.getByRole("heading", { name: "2026 TBR" })).toBeVisible();
 
     await page.goto("/books");
