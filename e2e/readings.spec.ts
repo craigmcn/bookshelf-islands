@@ -78,6 +78,18 @@ test.describe("Readings", () => {
     await expect(page.locator("dd i.fa-star")).toHaveCount(1);
   });
 
+  test("member can start a re-read from a finished book", async ({ page }) => {
+    await signIn(page, users.member);
+    await page.goto("/readings");
+
+    const rows = page.locator("tr", { has: page.getByRole("link", { name: "1984" }) });
+    await expect(rows).toHaveCount(1);
+    await rows.getByRole("button", { name: "Start a re-read" }).click();
+
+    await expect(rows).toHaveCount(2);
+    await expect(rows.filter({ hasText: "Want to read" })).toHaveCount(1);
+  });
+
   test("moderator soft-deleting a reading removes it from the owner's shelf", async ({ page, browser }) => {
     await signIn(page, users.moderator);
     await page.goto("/admin/readings");
