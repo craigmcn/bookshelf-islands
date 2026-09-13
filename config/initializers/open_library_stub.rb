@@ -11,7 +11,9 @@ if ENV["OPEN_LIBRARY_STUB"] == "1"
     docs = [
       {title: "The Hobbit", author_name: ["J.R.R. Tolkien"], cover_i: 1},
       {title: "The Great Gatsby", author_name: ["F. Scott Fitzgerald"], cover_i: 2},
-      {title: "1984", author_name: ["George Orwell"], cover_i: 3}
+      {title: "1984", author_name: ["George Orwell"], cover_i: 3},
+      {title: "Harry Potter and the Chamber of Secrets", author_name: ["J.K. Rowling"], cover_i: 4},
+      {title: "The Silmarillion", author_name: ["J.R.R. Tolkien"], cover_i: 5}
     ].select { |doc| doc[:title].downcase.include?(query) }
 
     {status: 200, headers: {"Content-Type" => "application/json"}, body: {docs: docs}.to_json}

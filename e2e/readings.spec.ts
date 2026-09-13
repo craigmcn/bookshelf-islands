@@ -29,6 +29,37 @@ test.describe("Readings", () => {
     await expect(page.getByRole("link", { name: "The Great Gatsby" })).toBeVisible();
   });
 
+  test("member can browse their shelf by genre tag", async ({ page }) => {
+    await signIn(page, users.member);
+    await page.goto("/readings");
+    await expect(page.getByRole("link", { name: "The Great Gatsby" })).toBeVisible();
+
+    // The Great Gatsby is tagged "fantasy" via the taggings fixture.
+    await page.getByRole("button", { name: "fantasy" }).click();
+    await expect(page.getByRole("link", { name: "The Great Gatsby" })).toBeVisible();
+
+    await page.getByRole("button", { name: "Clear tag filter" }).click();
+    await expect(page.getByRole("link", { name: "The Great Gatsby" })).toBeVisible();
+  });
+
+  test("member sees a Recommended for You section based on a highly-rated book's genre", async ({ page, browser }) => {
+    await signIn(page, users.moderator);
+    await page.goto("/books/new");
+    await page.getByLabel("Search for a Book").fill("chamber of secrets");
+    await page.getByRole("button", { name: /Chamber of Secrets/ }).click();
+    await page.getByLabel("Genres").fill("fantasy"); // matches the tag on the member's 4-star Gatsby reading
+    await page.keyboard.press("Enter");
+    await page.getByRole("button", { name: "Create Book" }).click();
+
+    // fresh context instead of reusing the moderator's page, since navigating a signed-in
+    // page to /sign_in just redirects it away rather than showing the form
+    const memberPage = await (await browser.newContext()).newPage();
+    await signIn(memberPage, users.member);
+    await memberPage.goto("/readings");
+    await expect(memberPage.getByRole("heading", { name: "Recommended for You" })).toBeVisible();
+    await expect(memberPage.getByRole("link", { name: /Chamber of Secrets/ })).toBeVisible();
+  });
+
   test("member can log a reading with a status, rating, review, format, dates, and progress", async ({ page }) => {
     await signIn(page, users.member);
     await page.goto("/readings/new");

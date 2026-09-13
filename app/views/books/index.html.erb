@@ -28,17 +28,19 @@
     </div>
   <% end %>
 
-  <% if @genre_tags.any? %>
-    <div class="d-flex flex-wrap align-items-center gap-1 mb-3">
-      <span class="text-muted small me-1">Browse by genre:</span>
-      <% @genre_tags.each do |tag| %>
-        <%= link_to tag.name, books_path(tag: tag.name, q: params[:q], sort: params[:sort]),
-              class: ["badge text-decoration-none", @tag == tag ? "text-bg-primary" : "text-bg-secondary"] %>
-      <% end %>
-      <% if @tag %>
-        <%= link_to "Clear tag filter", books_path(q: params[:q], sort: params[:sort]), class: "small ms-2" %>
-      <% end %>
-    </div>
+  <% [["Genre", @genre_tags], ["Mood", @mood_tags], ["Pace", @pace_tags]].each do |label, tags| %>
+    <% if tags.any? %>
+      <div class="d-flex flex-wrap align-items-center gap-1 mb-2">
+        <span class="text-muted small me-1">Browse by <%= label.downcase %>:</span>
+        <% tags.each do |tag| %>
+          <%= link_to tag.name, books_path(tag: tag.name, q: params[:q], sort: params[:sort]),
+                class: ["badge text-decoration-none", @tag == tag ? "text-bg-primary" : "text-bg-secondary"] %>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+  <% if @tag %>
+    <%= link_to "Clear tag filter", books_path(q: params[:q], sort: params[:sort]), class: "small d-inline-block mb-3" %>
   <% end %>
 
   <% if @books.any? %>

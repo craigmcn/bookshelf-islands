@@ -12,6 +12,8 @@ class BooksController < ApplicationController
   def index
     @books = policy_scope(Book).includes(:added_by)
     @genre_tags = Tag.genre.order(:name)
+    @mood_tags = Tag.mood.order(:name)
+    @pace_tags = Tag.pace.order(:name)
 
     if params[:q].present?
       query = "%#{params[:q].strip}%"
@@ -19,7 +21,7 @@ class BooksController < ApplicationController
     end
 
     if params[:tag].present?
-      @tag = Tag.genre.find_by(name: params[:tag].to_s.strip.downcase)
+      @tag = Tag.find_by(name: params[:tag].to_s.strip.downcase)
       @books = @tag ? @books.joins(:tags).where(tags: {id: @tag.id}) : @books.none
     end
 
@@ -39,6 +41,7 @@ class BooksController < ApplicationController
     authorize @book
     @user_reading = current_user&.readings&.find_by(book: @book)
     @shelf_picker_json = shelf_picker_json
+    @similar_books = @book.similar_books
   end
 
   def new
@@ -82,7 +85,7 @@ class BooksController < ApplicationController
   end
 
   def book_params
-    params.expect(book: [:title, :author, :cover_url, :tag_list])
+    params.expect(book: [:title, :author, :cover_url, :tag_list, :mood_list, :pace_list])
   end
 
   def catalog_page_json
@@ -91,6 +94,8 @@ class BooksController < ApplicationController
       sort: @sort,
       tag: @tag&.name,
       genre_tags: @genre_tags.map { |tag| {name: tag.name} },
+      mood_tags: @mood_tags.map { |tag| {name: tag.name} },
+      pace_tags: @pace_tags.map { |tag| {name: tag.name} },
       pagy: {page: @pagy.page, pages: @pagy.pages, count: @pagy.count}
     }
   end

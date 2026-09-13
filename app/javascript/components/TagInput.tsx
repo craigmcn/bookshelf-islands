@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react"
 
 interface TagInputProps {
+  category: string
+  label: string
   initialTags: string
   onChange: (tagList: string) => void
 }
@@ -14,7 +16,7 @@ function parseTags(value: string): string[] {
     .filter(Boolean)
 }
 
-export default function TagInput({ initialTags, onChange }: TagInputProps) {
+export default function TagInput({ category, label, initialTags, onChange }: TagInputProps) {
   const [tags, setTags] = useState<string[]>(() => parseTags(initialTags))
   const [query, setQuery] = useState("")
   const [suggestions, setSuggestions] = useState<string[]>([])
@@ -28,7 +30,9 @@ export default function TagInput({ initialTags, onChange }: TagInputProps) {
 
     const controller = new AbortController()
     const timeout = setTimeout(() => {
-      fetch(`/tags.json?q=${encodeURIComponent(query.trim())}`, { signal: controller.signal })
+      fetch(`/tags.json?q=${encodeURIComponent(query.trim())}&category=${encodeURIComponent(category)}`, {
+        signal: controller.signal,
+      })
         .then((response) => {
           if (!response.ok) throw new Error(`Tag search failed: ${response.status}`)
           return response.json()
@@ -43,7 +47,7 @@ export default function TagInput({ initialTags, onChange }: TagInputProps) {
       clearTimeout(timeout)
       controller.abort()
     }
-  }, [query, tags])
+  }, [query, tags, category])
 
   const addTag = (raw: string) => {
     const tag = raw.trim().toLowerCase()
@@ -71,10 +75,12 @@ export default function TagInput({ initialTags, onChange }: TagInputProps) {
     }
   }
 
+  const inputId = `${category}_tag_input`
+
   return (
     <div className="mb-3">
-      <label className="form-label" htmlFor="tag_input">
-        Genres
+      <label className="form-label" htmlFor={inputId}>
+        {label}
       </label>
       <div className="d-flex flex-wrap gap-2 mb-2">
         {tags.map((tag) => (
@@ -93,16 +99,16 @@ export default function TagInput({ initialTags, onChange }: TagInputProps) {
       <input
         ref={inputRef}
         type="text"
-        id="tag_input"
+        id={inputId}
         className="form-control"
-        placeholder="Type a genre and press Enter..."
+        placeholder={`Type a ${label.toLowerCase().replace(/s$/, "")} and press Enter...`}
         autoComplete="off"
         value={query}
         onChange={(event) => setQuery(event.target.value)}
         onKeyDown={handleKeyDown}
       />
       {suggestions.length > 0 && (
-        <div className="list-group mt-2" aria-label="Genre suggestions">
+        <div className="list-group mt-2" aria-label={`${label} suggestions`}>
           {suggestions.map((name) => (
             <button
               key={name}

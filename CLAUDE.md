@@ -74,6 +74,14 @@ one: 1, two: 2, three: 3, four: 4, five: 5
 ### Soft Deletes
 Readings use `deleted_at` for soft deletes. Default scopes exclude deleted records; use `Reading.unscoped` or `with_deleted` if you need them.
 
+### Tags
+- **tags** — `name` (unique across all categories), `category` (`genre | mood | pace`, default `genre`)
+- **taggings** — join table books ↔ tags
+- `Book#tag_list` / `#mood_list` / `#pace_list` — comma-separated virtual attributes, one per category, backing the `TagInput` island on the book form
+- `Book#similar_books` — books sharing the most tags (any category), most-overlap first
+- `Book.recommended_for(user)` — books tagged like ones the user rated 4-5★ or finished, excluding already-shelved books (tag-overlap only, no ML/vector infra); shown as "Recommended for You" on My Shelf
+- Catalog and shelf browsing both support a single `?tag=` filter shared across all three categories (tag names are unique, so no category qualifier is needed)
+
 ## Authentication & Authorization
 
 ### Clearance

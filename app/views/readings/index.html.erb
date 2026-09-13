@@ -7,9 +7,27 @@
   <% end %>
 </div>
 
+<% if @recommended_books.any? %>
+  <div class="mb-4">
+    <h2 class="h5"><i class="fasl fa-sparkles me-2 opacity-75"></i>Recommended for You</h2>
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3">
+      <% @recommended_books.each do |book| %>
+        <div class="col">
+          <%= link_to book, class: "text-decoration-none text-dark" do %>
+            <%= render book %>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+<% end %>
+
 <%# Without JS, the plain GET form below still works (real page loads, no client-side rendering). %>
 <noscript>
   <%= form_with url: readings_path, method: :get, class: "row g-2 mb-4" do |form| %>
+    <% if @tag %>
+      <%= hidden_field_tag :tag, @tag.name %>
+    <% end %>
     <div class="col-sm-6 col-md-4">
       <%= form.label :q, "Search", class: "visually-hidden" %>
       <%= form.text_field :q, value: params[:q], placeholder: "Search by title or author...", class: "form-control" %>
@@ -28,6 +46,19 @@
     </div>
     <div class="col-sm-auto">
       <button type="submit" class="btn btn-outline-secondary">Filter</button>
+    </div>
+  <% end %>
+
+  <% if @shelf_tags.any? %>
+    <div class="d-flex flex-wrap align-items-center gap-1 mb-4">
+      <span class="text-muted small me-1">Browse by genre:</span>
+      <% @shelf_tags.each do |tag| %>
+        <%= link_to tag.name, readings_path(tag: tag.name, q: params[:q], status: params[:status], rating: params[:rating], sort: params[:sort]),
+              class: ["badge text-decoration-none", @tag == tag ? "text-bg-primary" : "text-bg-secondary"] %>
+      <% end %>
+      <% if @tag %>
+        <%= link_to "Clear tag filter", readings_path(q: params[:q], status: params[:status], rating: params[:rating], sort: params[:sort]), class: "small ms-2" %>
+      <% end %>
     </div>
   <% end %>
 
@@ -63,6 +94,7 @@
      data-shelf-browser-initial-value="<%= @shelf_json.to_json %>"
      data-shelf-browser-query-value="<%= params[:q] %>"
      data-shelf-browser-status-value="<%= params[:status] %>"
-     data-shelf-browser-rating-value="<%= params[:rating] %>">
+     data-shelf-browser-rating-value="<%= params[:rating] %>"
+     data-shelf-browser-tag-value="<%= params[:tag] %>">
   <div data-shelf-browser-target="root"></div>
 </div>

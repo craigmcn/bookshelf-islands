@@ -54,11 +54,37 @@ class BooksControllerTest < ActionDispatch::IntegrationTest
     assert_equal [tags(:one).name], body["genre_tags"].pluck("name")
   end
 
+  test "catalog json includes mood and pace tag lists for browsing" do
+    @book.update!(mood_list: "dark", pace_list: "fast-paced")
+
+    get books_url(format: :json)
+    body = JSON.parse(response.body)
+    assert_equal ["dark"], body["mood_tags"].pluck("name")
+    assert_equal ["fast-paced"], body["pace_tags"].pluck("name")
+  end
+
+  test "catalog json filters by a mood tag" do
+    @book.update!(mood_list: "dark")
+
+    get books_url(tag: "dark", format: :json)
+    body = JSON.parse(response.body)
+    assert_equal [@book.title], body["books"].pluck("title")
+  end
+
   test "member can create a book with genre tags" do
     sign_in_as users(:member)
     post books_url, params: {book: {title: "New Book", author: "Some Author", added_by_id: users(:member).id, tag_list: "sci-fi, adventure"}}
 
     assert_equal ["adventure", "sci-fi"], Book.last.tags.order(:name).pluck(:name)
+  end
+
+  test "member can create a book with mood and pace tags" do
+    sign_in_as users(:member)
+    post books_url, params: {book: {title: "New Book", author: "Some Author", added_by_id: users(:member).id, mood_list: "hopeful", pace_list: "slow-burn"}}
+
+    book = Book.last
+    assert_equal ["hopeful"], book.tags.mood.pluck(:name)
+    assert_equal ["slow-burn"], book.tags.pace.pluck(:name)
   end
 
   test "catalog json paginates results" do
@@ -77,6 +103,15 @@ class BooksControllerTest < ActionDispatch::IntegrationTest
   test "anyone can view a book" do
     get book_url(@book)
     assert_response :success
+  end
+
+  test "book show renders similar books sharing a tag" do
+    similar = Book.create!(title: "Similar Book", author: "A. Uthor", added_by: users(:member))
+    similar.taggings.create!(tag: tags(:one))
+
+    get book_url(@book)
+    assert_response :success
+    assert_match(/Similar Book/, response.body)
   end
 
   test "signed-in member sees their lists and which ones contain the book (shelf picker island)" do

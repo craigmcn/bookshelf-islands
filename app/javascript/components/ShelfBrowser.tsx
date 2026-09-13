@@ -20,9 +20,15 @@ export interface ShelfReading {
   can_destroy: boolean
 }
 
+interface ShelfTag {
+  name: string
+}
+
 export interface ShelfPage {
   readings: ShelfReading[]
   sort: string
+  tag: string | null
+  shelf_tags: ShelfTag[]
   pagy: { page: number; pages: number; count: number }
 }
 
@@ -54,12 +60,20 @@ interface ShelfBrowserProps {
   initialQuery: string
   initialStatus: string
   initialRating: string
+  initialTag: string
 }
 
-export default function ShelfBrowser({ initial, initialQuery, initialStatus, initialRating }: ShelfBrowserProps) {
+export default function ShelfBrowser({
+  initial,
+  initialQuery,
+  initialStatus,
+  initialRating,
+  initialTag,
+}: ShelfBrowserProps) {
   const [query, setQuery] = useState(initialQuery)
   const [status, setStatus] = useState(initialStatus)
   const [rating, setRating] = useState(initialRating)
+  const [tag, setTag] = useState(initialTag)
   const [sort, setSort] = useState(initial.sort)
   const [page, setPage] = useState(initial.pagy.page)
   const [data, setData] = useState<ShelfPage>(initial)
@@ -72,6 +86,7 @@ export default function ShelfBrowser({ initial, initialQuery, initialStatus, ini
     if (query.trim()) params.set("q", query.trim())
     if (status) params.set("status", status)
     if (rating) params.set("rating", rating)
+    if (tag) params.set("tag", tag)
     params.set("sort", sort)
     params.set("page", String(page))
 
@@ -86,7 +101,13 @@ export default function ShelfBrowser({ initial, initialQuery, initialStatus, ini
       .then((result: ShelfPage) => setData(result))
       .catch((error: unknown) => {
         if ((error as { name?: string }).name !== "AbortError") {
-          setData({ readings: [], sort, pagy: { page: 1, pages: 1, count: 0 } })
+          setData((current) => ({
+            readings: [],
+            sort,
+            tag: tag || null,
+            shelf_tags: current.shelf_tags,
+            pagy: { page: 1, pages: 1, count: 0 },
+          }))
         }
       })
       .finally(() => setLoading(false))
@@ -105,7 +126,7 @@ export default function ShelfBrowser({ initial, initialQuery, initialStatus, ini
       clearTimeout(timeout)
       controller.abort()
     }
-  }, [query, status, rating, sort, page])
+  }, [query, status, rating, tag, sort, page])
 
   const resetToFirstPage = <T,>(setter: (value: T) => void) => (value: T) => {
     setter(value)
@@ -115,6 +136,7 @@ export default function ShelfBrowser({ initial, initialQuery, initialStatus, ini
   const handleQueryChange = resetToFirstPage(setQuery)
   const handleStatusChange = resetToFirstPage(setStatus)
   const handleRatingChange = resetToFirstPage(setRating)
+  const handleTagChange = resetToFirstPage(setTag)
   const handleSortChange = resetToFirstPage(setSort)
 
   const removeReading = (id: number) => {
@@ -202,6 +224,27 @@ export default function ShelfBrowser({ initial, initialQuery, initialStatus, ini
           </div>
         )}
       </div>
+
+      {data.shelf_tags.length > 0 && (
+        <div className="d-flex flex-wrap align-items-center gap-1 mb-3">
+          <span className="text-muted small me-1">Browse by genre:</span>
+          {data.shelf_tags.map((shelfTag) => (
+            <button
+              key={shelfTag.name}
+              type="button"
+              className={`badge border-0 ${tag === shelfTag.name ? "text-bg-primary" : "text-bg-secondary"}`}
+              onClick={() => handleTagChange(tag === shelfTag.name ? "" : shelfTag.name)}
+            >
+              {shelfTag.name}
+            </button>
+          ))}
+          {tag && (
+            <button type="button" className="btn btn-link btn-sm p-0 ms-2" onClick={() => handleTagChange("")}>
+              Clear tag filter
+            </button>
+          )}
+        </div>
+      )}
 
       {data.readings.length === 0 ? (
         <div className="text-center text-muted py-5">
