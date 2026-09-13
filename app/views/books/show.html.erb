@@ -16,8 +16,9 @@
     <p class="fs-5 text-muted"><%= @book.author %></p>
     <p class="text-muted"><small>Added by <%= @book.added_by.email %></small></p>
 
+    <% all_tags = @book.tags.to_a %>
     <% {genre: "text-bg-primary", mood: "text-bg-info", pace: "text-bg-warning"}.each do |category, badge_class| %>
-      <% category_tags = @book.tags.where(category: category).order(:name).to_a %>
+      <% category_tags = all_tags.select { |tag| tag.category == category.to_s }.sort_by(&:name) %>
       <% if category_tags.any? %>
         <div class="d-flex flex-wrap align-items-center gap-1 mb-2">
           <span class="text-muted small me-1"><%= category.to_s.capitalize %>:</span>
