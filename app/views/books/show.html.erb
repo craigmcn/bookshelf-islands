@@ -16,13 +16,17 @@
     <p class="fs-5 text-muted"><%= @book.author %></p>
     <p class="text-muted"><small>Added by <%= @book.added_by.email %></small></p>
 
-    <% genre_tags = @book.tags.genre.order(:name).to_a %>
-    <% if genre_tags.any? %>
-      <div class="d-flex flex-wrap gap-1 mb-2">
-        <% genre_tags.each do |tag| %>
-          <%= link_to tag.name, books_path(tag: tag.name), class: "badge text-bg-secondary text-decoration-none" %>
-        <% end %>
-      </div>
+    <% all_tags = @book.tags.to_a %>
+    <% {genre: "text-bg-primary", mood: "text-bg-info", pace: "text-bg-warning"}.each do |category, badge_class| %>
+      <% category_tags = all_tags.select { |tag| tag.category == category.to_s }.sort_by(&:name) %>
+      <% if category_tags.any? %>
+        <div class="d-flex flex-wrap align-items-center gap-1 mb-2">
+          <span class="text-muted small me-1"><%= category.to_s.capitalize %>:</span>
+          <% category_tags.each do |tag| %>
+            <%= link_to tag.name, books_path(tag: tag.name), class: ["badge text-decoration-none", badge_class] %>
+          <% end %>
+        </div>
+      <% end %>
     <% end %>
 
     <div class="d-flex flex-wrap gap-2 mt-4">
@@ -60,6 +64,20 @@
     </div>
   </div>
 </div>
+
+<% if @similar_books.any? %>
+  <hr class="my-4">
+  <h3><i class="fasl fa-shapes me-2 opacity-75"></i>Similar Books</h3>
+  <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+    <% @similar_books.each do |book| %>
+      <div class="col">
+        <%= link_to book, class: "text-decoration-none text-dark" do %>
+          <%= render book %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+<% end %>
 
 <% if @book.readings.any? %>
   <hr class="my-4">

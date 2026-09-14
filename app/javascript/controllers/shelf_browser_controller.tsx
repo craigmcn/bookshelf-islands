@@ -4,13 +4,14 @@ import ShelfBrowser, { type ShelfPage } from "../components/ShelfBrowser"
 
 export default class extends Controller<HTMLElement> {
   static targets = ["root"]
-  static values = { initial: Object, query: String, status: String, rating: String }
+  static values = { initial: Object, query: String, status: String, rating: String, tag: String }
 
   declare readonly rootTarget: HTMLElement
   declare readonly initialValue: ShelfPage
   declare readonly queryValue: string
   declare readonly statusValue: string
   declare readonly ratingValue: string
+  declare readonly tagValue: string
 
   #reactRoot: Root | null = null
 
@@ -22,6 +23,7 @@ export default class extends Controller<HTMLElement> {
         initialQuery={this.queryValue}
         initialStatus={this.statusValue}
         initialRating={this.ratingValue}
+        initialTag={this.tagValue}
       />
     )
   }

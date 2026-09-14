@@ -18,6 +18,8 @@ export interface CatalogPage {
   sort: string
   tag: string | null
   genre_tags: GenreTag[]
+  mood_tags: GenreTag[]
+  pace_tags: GenreTag[]
   pagy: { page: number; pages: number; count: number }
 }
 
@@ -74,6 +76,8 @@ export default function CatalogBrowser({ initial, initialQuery }: CatalogBrowser
               sort,
               tag: tag || null,
               genre_tags: current.genre_tags,
+              mood_tags: current.mood_tags,
+              pace_tags: current.pace_tags,
               pagy: { page: 1, pages: 1, count: 0 },
             }))
           }
@@ -145,25 +149,32 @@ export default function CatalogBrowser({ initial, initialQuery }: CatalogBrowser
         )}
       </div>
 
-      {data.genre_tags.length > 0 && (
-        <div className="d-flex flex-wrap align-items-center gap-1 mb-3">
-          <span className="text-muted small me-1">Browse by genre:</span>
-          {data.genre_tags.map((genreTag) => (
-            <button
-              key={genreTag.name}
-              type="button"
-              className={`badge border-0 ${tag === genreTag.name ? "text-bg-primary" : "text-bg-secondary"}`}
-              onClick={() => handleTagChange(tag === genreTag.name ? "" : genreTag.name)}
-            >
-              {genreTag.name}
-            </button>
-          ))}
-          {tag && (
-            <button type="button" className="btn btn-link btn-sm p-0 ms-2" onClick={() => handleTagChange("")}>
-              Clear tag filter
-            </button>
-          )}
-        </div>
+      {([
+        ["Genre", data.genre_tags],
+        ["Mood", data.mood_tags],
+        ["Pace", data.pace_tags],
+      ] as const).map(
+        ([label, tags]) =>
+          tags.length > 0 && (
+            <div key={label} className="d-flex flex-wrap align-items-center gap-1 mb-2">
+              <span className="text-muted small me-1">Browse by {label.toLowerCase()}:</span>
+              {tags.map((chipTag) => (
+                <button
+                  key={chipTag.name}
+                  type="button"
+                  className={`badge border-0 ${tag === chipTag.name ? "text-bg-primary" : "text-bg-secondary"}`}
+                  onClick={() => handleTagChange(tag === chipTag.name ? "" : chipTag.name)}
+                >
+                  {chipTag.name}
+                </button>
+              ))}
+            </div>
+          )
+      )}
+      {tag && (
+        <button type="button" className="btn btn-link btn-sm p-0 mb-3" onClick={() => handleTagChange("")}>
+          Clear tag filter
+        </button>
       )}
 
       {data.books.length === 0 ? (

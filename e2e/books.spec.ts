@@ -51,6 +51,44 @@ test.describe("Books", () => {
     await expect(page.getByRole("link", { name: "adventure" })).toBeVisible();
   });
 
+  test("member can tag a book with moods and pace, and browse the catalog by them", async ({ page }) => {
+    await signIn(page, users.member);
+    await page.goto("/books/new");
+
+    await page.getByLabel("Search for a Book").fill("chamber of secrets");
+    await page.getByRole("button", { name: /Chamber of Secrets/ }).click();
+
+    await page.getByLabel("Moods").fill("cozy");
+    await page.keyboard.press("Enter");
+    await page.getByLabel("Pace").fill("fast-paced");
+    await page.keyboard.press("Enter");
+
+    await page.getByRole("button", { name: "Create Book" }).click();
+    await expect(page).toHaveURL(/\/books\/\d+$/);
+    await expect(page.getByRole("link", { name: "cozy" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "fast-paced" })).toBeVisible();
+
+    await page.goto("/books");
+    await page.getByRole("button", { name: "cozy" }).click();
+    await expect(page.getByRole("link", { name: /Chamber of Secrets/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: "The Great Gatsby" })).toHaveCount(0);
+  });
+
+  test("book page lists similar books sharing a genre tag", async ({ page }) => {
+    await signIn(page, users.moderator);
+    await page.goto("/books/new");
+    await page.getByLabel("Search for a Book").fill("silmarillion");
+    await page.getByRole("button", { name: /The Silmarillion/ }).click();
+    await page.getByLabel("Genres").fill("fantasy");
+    await page.keyboard.press("Enter");
+    await page.getByRole("button", { name: "Create Book" }).click();
+
+    await page.goto("/books");
+    await page.getByRole("link", { name: "The Great Gatsby" }).click();
+    await expect(page.getByRole("heading", { name: "Similar Books" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "The Silmarillion" })).toBeVisible();
+  });
+
   test("member can search Open Library and add a book", async ({ page }) => {
     await signIn(page, users.member);
     await page.goto("/books/new");

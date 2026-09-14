@@ -1,8 +1,7 @@
 class ReadingsController < ApplicationController
   before_action :set_reading, only: %i[show edit update destroy]
 
-  # ported from community_bookshelf app/controllers/readings_controller.rb (SORT_OPTIONS + #index),
-  # minus the tag filter (needs the Tag/Tagging model from #23, not yet ported)
+  # ported from community_bookshelf app/controllers/readings_controller.rb (SORT_OPTIONS + #index)
   SORT_OPTIONS = {
     "recent" => {label: "Recently Updated", order: {updated_at: :desc}},
     "title" => {label: "Book Title", order: {"books.title": :asc}},
@@ -25,10 +24,18 @@ class ReadingsController < ApplicationController
       @readings = @readings.where(rating: params[:rating])
     end
 
+    if params[:tag].present?
+      @tag = Tag.genre.find_by(name: params[:tag].to_s.strip.downcase)
+      @readings = @tag ? @readings.merge(Book.joins(:tags).where(tags: {id: @tag.id})) : @readings.none
+    end
+
     @sort = SORT_OPTIONS.key?(params[:sort]) ? params[:sort] : "recent"
     @readings = @readings.order(SORT_OPTIONS[@sort][:order])
 
+    @shelf_tags = Tag.genre.joins(books: :readings).where(readings: {user: current_user}).distinct.order(:name)
+
     @pagy, @readings = pagy(@readings, limit: 10)
+    @recommended_books = Book.recommended_for(current_user)
     @shelf_json = shelf_page_json
 
     respond_to do |format|
@@ -96,6 +103,8 @@ class ReadingsController < ApplicationController
     {
       readings: @readings.map { |reading| shelf_reading_json(reading) },
       sort: @sort,
+      tag: @tag&.name,
+      shelf_tags: @shelf_tags.map { |tag| {name: tag.name} },
       pagy: {page: @pagy.page, pages: @pagy.pages, count: @pagy.count}
     }
   end

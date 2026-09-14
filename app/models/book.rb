@@ -7,19 +7,81 @@ class Book < ApplicationRecord
   validates :title, :author, presence: true
 
   after_save :sync_tag_list, if: -> { !@tag_list.nil? }
+  after_save :sync_mood_list, if: -> { !@mood_list.nil? }
+  after_save :sync_pace_list, if: -> { !@pace_list.nil? }
 
-  # Virtual attribute: a comma-separated string of genre tag names, used by the
-  # book form instead of exposing the tags association directly. Only touches
-  # taggings when explicitly assigned, so an update that omits it leaves the
-  # book's existing tags alone.
-  # ported from community_bookshelf app/models/book.rb (tag_list + sync_tag_list)
-  attr_writer :tag_list
+  # Virtual attributes: comma-separated strings of tag names, one per Tag
+  # category, used by the book form instead of exposing the tags association
+  # directly. Each only touches taggings for its own category when explicitly
+  # assigned, so an update that omits it leaves that category's existing tags alone.
+  # ported from community_bookshelf app/models/book.rb (tag_list/mood_list/pace_list + sync_*)
+  attr_writer :tag_list, :mood_list, :pace_list
 
   def tag_list
     @tag_list || tags.genre.order(:name).pluck(:name).join(", ")
   end
 
+  def mood_list
+    @mood_list || tags.mood.order(:name).pluck(:name).join(", ")
+  end
+
+  def pace_list
+    @pace_list || tags.pace.order(:name).pluck(:name).join(", ")
+  end
+
+  # Books sharing the most tags (any category) with this one, most-overlap first.
+  # ported from community_bookshelf app/models/book.rb (similar_books)
+  def similar_books(limit: 6)
+    tag_ids = tags.ids
+    return Book.none if tag_ids.empty?
+
+    Book.includes(:added_by)
+      .joins(:taggings)
+      .where(taggings: {tag_id: tag_ids})
+      .where.not(id: id)
+      .group("books.id")
+      .order(Arel.sql("COUNT(taggings.id) DESC"), "books.title ASC")
+      .limit(limit)
+  end
+
+  # Books tagged like the ones a user rated highly or finished, excluding books
+  # already on their shelf. Purely tag-overlap based — no ML/vector infra.
+  # ported from community_bookshelf app/models/book.rb (recommended_for)
+  def self.recommended_for(user, limit: 6)
+    return none unless user
+
+    user_readings = Reading.where(user_id: user.id)
+    liked_book_ids = user_readings
+      .where(status: :finished)
+      .or(user_readings.where(rating: [:four, :five]))
+      .distinct.pluck(:book_id)
+    return none if liked_book_ids.empty?
+
+    tag_ids = Tagging.where(book_id: liked_book_ids).distinct.pluck(:tag_id)
+    return none if tag_ids.empty?
+
+    shelved_book_ids = user_readings.distinct.pluck(:book_id)
+
+    includes(:added_by)
+      .joins(:taggings)
+      .where(taggings: {tag_id: tag_ids})
+      .where.not(id: shelved_book_ids)
+      .group("books.id")
+      .order(Arel.sql("COUNT(taggings.id) DESC"), "books.title ASC")
+      .limit(limit)
+  end
+
   private
+
+  def sync_mood_list
+    sync_tags_for_category("mood", @mood_list)
+    @mood_list = nil
+  end
+
+  def sync_pace_list
+    sync_tags_for_category("pace", @pace_list)
+    @pace_list = nil
+  end
 
   def sync_tag_list
     sync_tags_for_category("genre", @tag_list)

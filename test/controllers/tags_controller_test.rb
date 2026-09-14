@@ -20,4 +20,27 @@ class TagsControllerTest < ActionDispatch::IntegrationTest
 
     assert_equal [], JSON.parse(response.body)
   end
+
+  test "member gets matching mood tag names when category is mood" do
+    Tag.create!(name: "dark", category: :mood)
+    sign_in_as users(:member)
+
+    get tags_url(q: "dar", category: "mood"), as: :json
+
+    assert_equal ["dark"], JSON.parse(response.body)
+  end
+
+  test "member does not get genre tags when searching a different category" do
+    sign_in_as users(:member)
+    get tags_url(q: "fan", category: "mood"), as: :json
+
+    assert_equal [], JSON.parse(response.body)
+  end
+
+  test "member gets genre tag names for an unknown category value" do
+    sign_in_as users(:member)
+    get tags_url(q: "fan", category: "bogus"), as: :json
+
+    assert_equal [tags(:one).name], JSON.parse(response.body)
+  end
 end

@@ -61,6 +61,41 @@ class ReadingsControllerTest < ActionDispatch::IntegrationTest
     assert_equal ["The Great Gatsby"], readings.pluck("book_title")
   end
 
+  test "shelf json filters by genre tag" do
+    sign_in_as users(:member)
+    Reading.create!(user: users(:member), book: books(:two), status: :reading)
+
+    get readings_url(tag: tags(:one).name, format: :json) # books(:one) is tagged fantasy via the taggings fixture
+    body = JSON.parse(response.body)
+    assert_equal ["The Great Gatsby"], body["readings"].pluck("book_title")
+    assert_equal tags(:one).name, body["tag"]
+  end
+
+  test "shelf json returns no readings for an unknown tag" do
+    sign_in_as users(:member)
+    get readings_url(tag: "no-such-tag", format: :json)
+    body = JSON.parse(response.body)
+    assert_empty body["readings"]
+    assert_nil body["tag"]
+  end
+
+  test "shelf json includes the genre tags present on the user's shelf" do
+    sign_in_as users(:member)
+    get readings_url(format: :json)
+    body = JSON.parse(response.body)
+    assert_equal [tags(:one).name], body["shelf_tags"].pluck("name")
+  end
+
+  test "shelf index renders recommended books tagged like ones the user rated highly" do
+    sign_in_as users(:member) # readings(:one) rates books(:one) (tagged fantasy) a 4, which counts as "liked"
+    recommended = Book.create!(title: "Recommended Fantasy", author: "A. Uthor", added_by: users(:admin), tag_list: "fantasy")
+
+    get readings_url
+    assert_response :success
+    assert_match(/Recommended Fantasy/, response.body)
+    assert_equal [recommended], Book.recommended_for(users(:member))
+  end
+
   test "member can create a reading" do
     sign_in_as users(:member)
     assert_difference "Reading.count" do
