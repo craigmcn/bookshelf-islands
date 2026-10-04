@@ -1,6 +1,7 @@
 Rails.application.routes.draw do
   resources :readings
   resources :books
+  resources :series
   get "book_search", to: "book_search#index"
   resources :tags, only: [:index]
   resources :shelves do

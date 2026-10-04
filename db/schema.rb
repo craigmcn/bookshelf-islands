@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_08_152738) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_04_192149) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -21,23 +21,31 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_152738) do
     t.datetime "created_at", null: false
     t.string "title"
     t.datetime "updated_at", null: false
+    t.string "isbn"
+    t.integer "page_count"
+    t.date "published_on"
+    t.text "description"
+    t.string "subjects", default: [], null: false, array: true
+    t.bigint "series_id"
+    t.integer "series_position"
     t.index ["added_by_id"], name: "index_books_on_added_by_id"
+    t.index ["series_id"], name: "index_books_on_series_id"
   end
 
   create_table "readings", force: :cascade do |t|
     t.bigint "book_id", null: false
     t.datetime "created_at", null: false
     t.datetime "deleted_at"
-    t.date "finished_on"
-    t.integer "format"
-    t.boolean "is_review_public", default: true, null: false
-    t.integer "progress_percent"
     t.integer "rating"
     t.text "review"
-    t.date "started_on"
     t.integer "status"
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
+    t.date "started_on"
+    t.date "finished_on"
+    t.integer "progress_percent"
+    t.integer "format"
+    t.boolean "is_review_public", default: true, null: false
     t.index ["book_id"], name: "index_readings_on_book_id"
     t.index ["user_id"], name: "index_readings_on_user_id"
     t.check_constraint "progress_percent IS NULL OR progress_percent >= 0 AND progress_percent <= 100", name: "readings_progress_percent_range"
@@ -60,10 +68,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_152738) do
     t.index ["name"], name: "index_roles_on_name", unique: true
   end
 
+  create_table "series", force: :cascade do |t|
+    t.string "name", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["name"], name: "index_series_on_name", unique: true
+  end
+
   create_table "shelf_books", force: :cascade do |t|
+    t.bigint "shelf_id", null: false
     t.bigint "book_id", null: false
     t.datetime "created_at", null: false
-    t.bigint "shelf_id", null: false
     t.datetime "updated_at", null: false
     t.index ["book_id"], name: "index_shelf_books_on_book_id"
     t.index ["shelf_id", "book_id"], name: "index_shelf_books_on_shelf_id_and_book_id", unique: true
@@ -71,18 +86,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_152738) do
   end
 
   create_table "shelves", force: :cascade do |t|
-    t.datetime "created_at", null: false
     t.string "name", null: false
-    t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
     t.index ["user_id", "name"], name: "index_shelves_on_user_id_and_name", unique: true
     t.index ["user_id"], name: "index_shelves_on_user_id"
   end
 
   create_table "taggings", force: :cascade do |t|
     t.bigint "book_id", null: false
-    t.datetime "created_at", null: false
     t.bigint "tag_id", null: false
+    t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["book_id", "tag_id"], name: "index_taggings_on_book_id_and_tag_id", unique: true
     t.index ["book_id"], name: "index_taggings_on_book_id"
@@ -90,9 +105,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_152738) do
   end
 
   create_table "tags", force: :cascade do |t|
+    t.string "name", null: false
     t.string "category", default: "genre", null: false
     t.datetime "created_at", null: false
-    t.string "name", null: false
     t.datetime "updated_at", null: false
     t.index ["category"], name: "index_tags_on_category"
     t.index ["name"], name: "index_tags_on_name", unique: true
@@ -110,6 +125,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_152738) do
     t.index ["remember_token"], name: "index_users_on_remember_token", unique: true
   end
 
+  add_foreign_key "books", "series"
   add_foreign_key "books", "users", column: "added_by_id"
   add_foreign_key "readings", "books"
   add_foreign_key "readings", "users"

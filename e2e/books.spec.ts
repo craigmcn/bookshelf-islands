@@ -89,6 +89,44 @@ test.describe("Books", () => {
     await expect(page.getByRole("link", { name: "The Silmarillion" })).toBeVisible();
   });
 
+  test("moderator can set ISBN, page count, and publish date on a book", async ({ page }) => {
+    await signIn(page, users.moderator);
+    await page.goto("/books/new");
+    await page.getByLabel("Search for a Book").fill("chamber of secrets");
+    await page.getByRole("button", { name: /Chamber of Secrets/ }).click();
+    await page.getByLabel("ISBN").fill("978-0451524935");
+    await page.getByLabel("Page Count").fill("328");
+    await page.getByLabel("Publish Date").fill("1949-06-08");
+    await page.getByRole("button", { name: "Create Book" }).click();
+
+    await expect(page).toHaveURL(/\/books\/\d+$/);
+    await expect(page.getByText("ISBN: 978-0451524935")).toBeVisible();
+    await expect(page.getByText("328 pages")).toBeVisible();
+    await expect(page.getByText("Published June 8, 1949")).toBeVisible();
+  });
+
+  test("moderator can create a series and assign a book to it", async ({ page }) => {
+    await signIn(page, users.moderator);
+    await page.goto("/series/new");
+    await page.getByLabel("Name").fill("The Riverbend Chronicles");
+    await page.getByRole("button", { name: "Create Series" }).click();
+    await expect(page.getByRole("heading", { name: "The Riverbend Chronicles" })).toBeVisible();
+
+    await page.goto("/books/new");
+    await page.getByLabel("Search for a Book").fill("hobbit");
+    await page.getByRole("button", { name: /The Hobbit/ }).click();
+    await page.getByLabel("Series", { exact: true }).selectOption({ label: "The Riverbend Chronicles" });
+    await page.getByLabel("Position in Series").fill("1");
+    await page.getByRole("button", { name: "Create Book" }).click();
+
+    await expect(page).toHaveURL(/\/books\/\d+$/);
+    await expect(page.getByRole("link", { name: "The Riverbend Chronicles" })).toBeVisible();
+    await expect(page.getByText("Book 1")).toBeVisible();
+
+    await page.getByRole("link", { name: "The Riverbend Chronicles" }).click();
+    await expect(page.getByRole("link", { name: "The Hobbit" })).toBeVisible();
+  });
+
   test("member can search Open Library and add a book", async ({ page }) => {
     await signIn(page, users.member);
     await page.goto("/books/new");
