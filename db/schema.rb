@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_04_205032) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_04_223406) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -58,6 +58,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_04_205032) do
     t.integer "series_position"
     t.index ["added_by_id"], name: "index_books_on_added_by_id"
     t.index ["series_id"], name: "index_books_on_series_id"
+  end
+
+  create_table "notifications", force: :cascade do |t|
+    t.bigint "recipient_id", null: false
+    t.bigint "actor_id", null: false
+    t.string "notifiable_type", null: false
+    t.bigint "notifiable_id", null: false
+    t.string "notification_type", null: false
+    t.datetime "read_at"
+    t.datetime "digested_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["actor_id"], name: "index_notifications_on_actor_id"
+    t.index ["notifiable_type", "notifiable_id"], name: "index_notifications_on_notifiable"
+    t.index ["recipient_id", "read_at"], name: "index_notifications_on_recipient_id_and_read_at"
+    t.index ["recipient_id"], name: "index_notifications_on_recipient_id"
   end
 
   create_table "readings", force: :cascade do |t|
@@ -163,6 +179,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_04_205032) do
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "books", "series"
   add_foreign_key "books", "users", column: "added_by_id"
+  add_foreign_key "notifications", "users", column: "actor_id"
+  add_foreign_key "notifications", "users", column: "recipient_id"
   add_foreign_key "readings", "books"
   add_foreign_key "readings", "users"
   add_foreign_key "role_assignments", "roles"

@@ -15,6 +15,8 @@ class User < ApplicationRecord
   has_many :shelves, dependent: :destroy
   has_many :role_assignments, dependent: :destroy
   has_many :roles, through: :role_assignments
+  # ported from community_bookshelf app/models/user.rb (notifications association)
+  has_many :notifications, foreign_key: :recipient_id, inverse_of: :recipient, dependent: :destroy
   has_one_attached :avatar
 
   # Excludes the system placeholder account from user-facing listings (admin
