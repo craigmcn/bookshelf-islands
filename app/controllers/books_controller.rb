@@ -116,7 +116,7 @@ class BooksController < ApplicationController
       title: book.title,
       author: book.author,
       cover_url: book.cover_url.presence,
-      added_by_email: book.added_by.email,
+      added_by_name: book.added_by.display_name,
       path: book_path(book)
     }
   end
