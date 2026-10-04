@@ -17,6 +17,13 @@ class User < ApplicationRecord
   has_many :roles, through: :role_assignments
   # ported from community_bookshelf app/models/user.rb (notifications association)
   has_many :notifications, foreign_key: :recipient_id, inverse_of: :recipient, dependent: :destroy
+  # ported from community_bookshelf app/models/user.rb (follows/favorite_genres associations)
+  has_many :active_follows, class_name: "Follow", foreign_key: :follower_id, inverse_of: :follower, dependent: :destroy
+  has_many :following, through: :active_follows, source: :followed
+  has_many :passive_follows, class_name: "Follow", foreign_key: :followed_id, inverse_of: :followed, dependent: :destroy
+  has_many :followers, through: :passive_follows, source: :follower
+  has_many :favorite_genres, dependent: :destroy
+  has_many :favorite_genre_tags, through: :favorite_genres, source: :tag
   has_one_attached :avatar
 
   # Excludes the system placeholder account from user-facing listings (admin
@@ -34,6 +41,17 @@ class User < ApplicationRecord
 
   after_create :assign_default_role
   after_create :send_email_confirmation, unless: :skip_confirmation_email
+  after_save :sync_favorite_genre_list, if: -> { !@favorite_genre_list.nil? }
+
+  # Virtual attribute: a comma-separated string of genre tag names, mirroring
+  # Book#tag_list. Only touches favorite_genres when explicitly assigned, so a
+  # profile update that omits it leaves existing favorites alone.
+  # ported from community_bookshelf app/models/user.rb (favorite_genre_list)
+  attr_writer :favorite_genre_list
+
+  def favorite_genre_list
+    @favorite_genre_list || favorite_genre_tags.order(:name).pluck(:name).join(", ")
+  end
 
   def admin?
     roles.exists?(name: "admin")
@@ -65,6 +83,11 @@ class User < ApplicationRecord
     name.presence || email
   end
 
+  # ported from community_bookshelf app/models/user.rb (following?)
+  def following?(other_user)
+    active_follows.exists?(followed_id: other_user.id)
+  end
+
   def email_confirmed?
     email_confirmed_at.present?
   end
@@ -94,10 +117,19 @@ class User < ApplicationRecord
   # Reassigns this user's contributed catalog books to a shared placeholder
   # account (so the catalog isn't disrupted by an account deletion), then
   # destroys the user — cascading to their own readings/shelves/role
-  # assignments via dependent: :destroy. Readings' default scope hides
-  # soft-deleted rows from that association, so they're destroyed explicitly
-  # first — otherwise one left behind would still reference this user's id
-  # via its FK and the final destroy! would fail.
+  # assignments/follows/favorite_genres via dependent: :destroy. Readings'
+  # default scope hides soft-deleted rows from that association, so they're
+  # destroyed explicitly first — otherwise one left behind would still
+  # reference this user's id via its FK and the final destroy! would fail.
+  #
+  # Notification's actor_id FK needs no equivalent explicit handling despite
+  # `notifications` (dependent: :destroy above) only covering the recipient
+  # side: dependent: :destroy cascades transitively, and every notifiable
+  # source (Follow here, ReviewComment/ClubPost once ported) is itself
+  # dependent: :destroy on this user *and* declares dependent: :destroy on
+  # its own notifiable notification(s) — destroying this user's Follows
+  # destroys their Notifications too, whichever side (actor or recipient)
+  # this user was on. Verified empirically before assuming otherwise.
   def delete_account!
     raise SoleAdminError, "Can't delete the only admin account." if sole_admin?
 
@@ -130,6 +162,23 @@ class User < ApplicationRecord
   def assign_default_role
     member_role = Role.find_by(name: "member")
     roles << member_role if member_role
+  end
+
+  # ported from community_bookshelf app/models/user.rb (sync_favorite_genre_list/find_or_create_genre_tag)
+  def sync_favorite_genre_list
+    names = @favorite_genre_list.to_s.split(",").filter_map { |name| name.strip.downcase.presence }.uniq
+    desired_ids = names.map { |name| find_or_create_genre_tag(name).id }
+    current_ids = favorite_genre_tags.pluck(:id)
+
+    favorite_genres.where(tag_id: current_ids - desired_ids).destroy_all
+    (desired_ids - current_ids).each { |tag_id| favorite_genres.create!(tag_id: tag_id) }
+    @favorite_genre_list = nil
+  end
+
+  def find_or_create_genre_tag(name)
+    Tag.find_or_create_by!(name: name) { |tag| tag.category = "genre" }
+  rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid
+    Tag.find_by!(name: name)
   end
 
   def avatar_is_a_supported_image_under_the_size_limit

@@ -100,7 +100,11 @@ Readings use `deleted_at` for soft deletes. Default scopes exclude deleted recor
 - Email confirmation is informational-only, not enforced: `send_email_confirmation` (fired `after_create` unless `skip_confirmation_email`, set by seeds/the deleted placeholder) emails a `confirm_email/:token` link via `UserMailer`; `EmailConfirmationsController#create` resends with a 1-minute cooldown (`User::RESEND_COOLDOWN`)
 
 ### Social (in progress)
-`doc/feature_roadmap.md`'s Social category (#51-#56 here) is being ported in dependency order, one PR per step, since each piece depends on the last: (1) `Notification` model — polymorphic, no trigger wired yet; (2) Follow + minimal profile page (favorite genres, followers/following — no streak/badge/challenge sections, those aren't ported); (3) Activity feed; (4) review likes/comments as React islands; (5) buddy reads; (6) book clubs with spoiler-gated posts. The original Notifications category (#62-#65, #84 — triggers + bell/inbox UI) resumes once this lands. **Known gap carried over from community_bookshelf** (see community_bookshelf#191): `User#delete_account!` must also clear `Notification.where(actor_id: id)` once a real trigger exists (step 2) — a `NOT NULL` FK on `actor_id` with no cascade means any user who has ever followed/commented/posted would otherwise fail to delete their own account.
+`doc/feature_roadmap.md`'s Social category (#51-#56 here) is being ported in dependency order, one PR per step, since each piece depends on the last: (1) `Notification` model — done; (2) Follow + minimal profile page — done, see below; (3) Activity feed; (4) review likes/comments as React islands; (5) buddy reads; (6) book clubs with spoiler-gated posts. The original Notifications category (#62-#65, #84 — triggers + bell/inbox UI) resumes once this lands.
+
+- `Follow` (`follower`/`followed`, both `User`) creates a `new_follower` `Notification` on create, destroyed along with it (`has_one :notification, as: :notifiable, dependent: :destroy`) — `User#following?`/`#followers`/`#following` read through `active_follows`/`passive_follows`. Deleting either side of a follow relationship cascades cleanly through `dependent: :destroy` all the way to the notification, with no special-casing needed in `delete_account!` (verified empirically — see the corrected community_bookshelf#191).
+- `User#favorite_genre_list` mirrors `Book#tag_list`'s virtual-attribute pattern exactly (comma-separated genre tag names, synced via `after_save`), reusing the same `Tag` model (category `genre`).
+- `ProfilesController#show` (`/users/:id`) is a minimal port: bio/avatar/favorite genres, finished/currently-reading counts, up to 5 public reviews, a follow/unfollow button, and followers/following tabs. Deliberately omits `current_streak`/`badges`/`current_year_challenge` — Gamification roadmap category, not ported here. `User.excluding_deleted_placeholder` keeps the placeholder account's profile a 404.
 
 ## Authentication & Authorization
 
@@ -140,6 +144,10 @@ resources :series        SeriesController             (public read, moderator+ w
 resource :account        AccountsController           (edit/update/destroy own account)
 resource :email_confirmation  EmailConfirmationsController#create (resend)
 GET  /confirm_email/:token    EmailConfirmationsController#confirm
+
+GET  /users/:id          ProfilesController#show      (any signed-in user)
+GET  /users/:id/followers, /following  ProfilesController#followers/#following
+POST/DELETE /users/:user_id/follow     FollowsController#create/#destroy
 
 GET  /book_search        BookSearchController#index   (Turbo Frame search)
 

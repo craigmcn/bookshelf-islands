@@ -1,6 +1,9 @@
-# ported from community_bookshelf app/policies/user_policy.rb (edit?/update?/destroy? only — show? backs a public
-# profile page that isn't implemented here, see Social roadmap category)
+# ported from community_bookshelf app/policies/user_policy.rb
 class UserPolicy < ApplicationPolicy
+  # Any signed-in member can view another member's profile page — show? backs
+  # ProfilesController, not AccountsController.
+  def show? = user.present?
+
   # Backs AccountsController, which only ever loads current_user (never a
   # params[:id]) — these checks exist to pin that invariant with the same
   # authorization layer every other model in this app uses, not because the

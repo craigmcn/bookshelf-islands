@@ -1,4 +1,4 @@
-# ported from community_bookshelf app/controllers/accounts_controller.rb (favorite_genre_list omitted — see Social roadmap category)
+# ported from community_bookshelf app/controllers/accounts_controller.rb
 class AccountsController < ApplicationController
   def edit
     @user = current_user
@@ -52,6 +52,6 @@ class AccountsController < ApplicationController
   end
 
   def account_params
-    params.expect(user: [:name, :bio, :avatar])
+    params.expect(user: [:name, :bio, :avatar, :favorite_genre_list])
   end
 end
