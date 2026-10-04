@@ -5,7 +5,7 @@ interface CatalogBook {
   title: string
   author: string
   cover_url: string | null
-  added_by_email: string
+  added_by_name: string
   path: string
 }
 
@@ -208,7 +208,7 @@ export default function CatalogBrowser({ initial, initialQuery }: CatalogBrowser
                     <h5 className="card-title">{book.title}</h5>
                     <p className="card-text text-muted mb-1">{book.author}</p>
                     <p className="card-text">
-                      <small className="text-muted">Added by {book.added_by_email}</small>
+                      <small className="text-muted">Added by {book.added_by_name}</small>
                     </p>
                   </div>
                 </div>

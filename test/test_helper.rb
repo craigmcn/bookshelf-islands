@@ -4,6 +4,8 @@ require "rails/test_help"
 
 module ActiveSupport
   class TestCase
+    include ActionMailer::TestHelper
+
     parallelize(workers: :number_of_processors)
     fixtures :all
   end

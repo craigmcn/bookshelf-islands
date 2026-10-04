@@ -59,7 +59,7 @@ yarn test:e2e                           # Playwright e2e (starts its own server,
 - **books** — `title`, `author`, `cover_url`, `added_by_id` (FK → users), `isbn`, `page_count`, `published_on`, `description`, `subjects` (array), `series_id` (FK → series, optional), `series_position`
 - **series** — `name` (unique); a book's `series_position` is cleared automatically if its `series_id` is blank
 - **readings** — `user_id`, `book_id`, `status` (enum), `rating` (enum), `review`, `is_review_public`, `format` (enum), `started_on`, `finished_on`, `progress_percent`, `deleted_at` (soft delete)
-- **users** — Clearance authentication (email, encrypted_password, tokens)
+- **users** — Clearance authentication (email, encrypted_password, tokens), plus `name`, `bio`, `email_confirmed_at`, `email_confirmation_token`, `email_confirmation_sent_at`; `has_one_attached :avatar` (Active Storage)
 - **roles** — `name`: `member | moderator | admin`
 - **role_assignments** — join table users ↔ roles (users can hold multiple roles)
 
@@ -91,6 +91,13 @@ Readings use `deleted_at` for soft deletes. Default scopes exclude deleted recor
 - Series are their own resource (`resources :series`, moderator+ to create/edit/destroy, public to browse) — a book optionally belongs to one via `series_id`/`series_position`; a series' show page lists its books ordered by position
 - `Book#open_library_key` is a transient (non-persisted) attribute carrying the selected Open Library search result's work key from the form through to `#create`, which calls `OpenLibraryService.work_detail(key)` to backfill `description`/`subjects` before saving — it round-trips through a failed create/re-render like any other form field
 - The `BookSearch` island's selection now carries `openLibraryKey` alongside title/author/cover, synced to a hidden field the same way as the others
+
+### Account & Profile
+- `User#display_name` falls back to `email` when `name` is blank — used everywhere a user's contributions are attributed (book cards, book show, community readings, navbar); admin views still show `.email` directly since admins need the real account identity
+- Self-service profile edit/avatar upload/account deletion live under `resource :account` (`AccountsController#edit/update/destroy`, `app/views/accounts/edit.html.erb`) — plain form fields and a native file input, no React island
+- Avatar: `has_one_attached :avatar` (Active Storage, local disk service in dev/test/production — see `config/storage.yml`), validated for size (`User::MAX_AVATAR_BYTES`, 5MB) and content type (`User::ALLOWED_AVATAR_TYPES`: PNG/JPEG/WEBP) in `avatar_is_a_supported_image_under_the_size_limit`; rendered directly with `image_tag`, no variants/processing
+- `User#delete_account!` reassigns the user's catalog books to a shared placeholder account (`User.deleted_placeholder`, memoized by a well-known email) so the catalog survives, explicitly destroys their soft-deleted readings first (the default scope would otherwise hide them from `dependent: :destroy` and leave a dangling FK), then destroys the user; raises `User::SoleAdminError` if the user is `sole_admin?` (the last admin — deleting would lock every `/admin` route)
+- Email confirmation is informational-only, not enforced: `send_email_confirmation` (fired `after_create` unless `skip_confirmation_email`, set by seeds/the deleted placeholder) emails a `confirm_email/:token` link via `UserMailer`; `EmailConfirmationsController#create` resends with a 1-minute cooldown (`User::RESEND_COOLDOWN`)
 
 ## Authentication & Authorization
 
@@ -126,6 +133,10 @@ DELETE /books/:id        BooksController#destroy     (moderator+)
 
 resources :readings      ReadingsController           (owner or moderator+)
 resources :series        SeriesController             (public read, moderator+ write)
+
+resource :account        AccountsController           (edit/update/destroy own account)
+resource :email_confirmation  EmailConfirmationsController#create (resend)
+GET  /confirm_email/:token    EmailConfirmationsController#confirm
 
 GET  /book_search        BookSearchController#index   (Turbo Frame search)
 
