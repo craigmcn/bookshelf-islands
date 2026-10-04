@@ -33,6 +33,14 @@ class BooksControllerTest < ActionDispatch::IntegrationTest
     assert_equal "title", JSON.parse(response.body)["sort"]
   end
 
+  test "catalog json sorts by publication date with undated books last" do
+    @book.update!(published_on: "1925-04-10") # books(:two) has no published_on
+
+    get books_url(sort: "published", format: :json)
+    books = JSON.parse(response.body)["books"]
+    assert_equal [@book.title, books(:two).title], books.pluck("title")
+  end
+
   test "catalog json filters by tag" do
     @book.update!(tag_list: tags(:one).name)
 

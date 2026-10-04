@@ -94,7 +94,7 @@ test.describe("Books", () => {
     await page.goto("/books/new");
     await page.getByLabel("Search for a Book").fill("chamber of secrets");
     await page.getByRole("button", { name: /Chamber of Secrets/ }).click();
-    await page.getByLabel("Isbn").fill("978-0451524935");
+    await page.getByLabel("ISBN").fill("978-0451524935");
     await page.getByLabel("Page Count").fill("328");
     await page.getByLabel("Publish Date").fill("1949-06-08");
     await page.getByRole("button", { name: "Create Book" }).click();
