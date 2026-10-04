@@ -6,7 +6,8 @@ class BooksController < ApplicationController
   SORT_OPTIONS = {
     "title" => {label: "Title", order: {title: :asc}},
     "author" => {label: "Author", order: {author: :asc, title: :asc}},
-    "newest" => {label: "Recently Added", order: {created_at: :desc}}
+    "newest" => {label: "Recently Added", order: {created_at: :desc}},
+    "published" => {label: "Publication Date", order: {published_on: :desc}}
   }.freeze
 
   def index
@@ -56,6 +57,11 @@ class BooksController < ApplicationController
     @book = Book.new(book_params.merge(added_by: current_user))
     authorize @book
 
+    # ported from community_bookshelf app/controllers/books_controller.rb (#create open_library_key lookup)
+    detail = OpenLibraryService.work_detail(@book.open_library_key)
+    @book.description = detail[:description] if detail[:description].present?
+    @book.subjects = detail[:subjects] if detail[:subjects].present?
+
     if @book.save
       redirect_to @book, notice: "Book was successfully created."
     else
@@ -85,7 +91,8 @@ class BooksController < ApplicationController
   end
 
   def book_params
-    params.expect(book: [:title, :author, :cover_url, :tag_list, :mood_list, :pace_list])
+    params.expect(book: [:title, :author, :cover_url, :isbn, :page_count, :published_on, :open_library_key,
+      :series_id, :series_position, :tag_list, :mood_list, :pace_list])
   end
 
   def catalog_page_json

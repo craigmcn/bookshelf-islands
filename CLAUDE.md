@@ -56,8 +56,9 @@ yarn test:e2e                           # Playwright e2e (starts its own server,
 ## Domain Model
 
 ### Core Tables
-- **books** — `title`, `author`, `cover_url`, `added_by_id` (FK → users)
-- **readings** — `user_id`, `book_id`, `status` (enum), `rating` (enum), `review`, `deleted_at` (soft delete)
+- **books** — `title`, `author`, `cover_url`, `added_by_id` (FK → users), `isbn`, `page_count`, `published_on`, `description`, `subjects` (array), `series_id` (FK → series, optional), `series_position`
+- **series** — `name` (unique); a book's `series_position` is cleared automatically if its `series_id` is blank
+- **readings** — `user_id`, `book_id`, `status` (enum), `rating` (enum), `review`, `is_review_public`, `format` (enum), `started_on`, `finished_on`, `progress_percent`, `deleted_at` (soft delete)
 - **users** — Clearance authentication (email, encrypted_password, tokens)
 - **roles** — `name`: `member | moderator | admin`
 - **role_assignments** — join table users ↔ roles (users can hold multiple roles)
@@ -65,10 +66,13 @@ yarn test:e2e                           # Playwright e2e (starts its own server,
 ### Enums
 ```ruby
 # Reading#status
-want_to_read: 0, reading: 1, finished: 2
+want_to_read: 0, reading: 1, finished: 2, dnf: 3
 
 # Reading#rating
 one: 1, two: 2, three: 3, four: 4, five: 5
+
+# Reading#format
+physical: 0, ebook: 1, audiobook: 2
 ```
 
 ### Soft Deletes
@@ -81,6 +85,12 @@ Readings use `deleted_at` for soft deletes. Default scopes exclude deleted recor
 - `Book#similar_books` — books sharing the most tags (any category), most-overlap first
 - `Book.recommended_for(user)` — books tagged like ones the user rated 4-5★ or finished, excluding already-shelved books (tag-overlap only, no ML/vector infra); shown as "Recommended for You" on My Shelf
 - Catalog and shelf browsing both support a single `?tag=` filter shared across all three categories (tag names are unique, so no category qualifier is needed)
+
+### Cataloging & Metadata
+- `isbn`, `page_count`, `published_on` are plain fields on the book form (like `format`/dates on `Reading`, no island needed); catalog sort gains a `published` option ordering by `published_on` desc
+- Series are their own resource (`resources :series`, moderator+ to create/edit/destroy, public to browse) — a book optionally belongs to one via `series_id`/`series_position`; a series' show page lists its books ordered by position
+- `Book#open_library_key` is a transient (non-persisted) attribute carrying the selected Open Library search result's work key from the form through to `#create`, which calls `OpenLibraryService.work_detail(key)` to backfill `description`/`subjects` before saving — it round-trips through a failed create/re-render like any other form field
+- The `BookSearch` island's selection now carries `openLibraryKey` alongside title/author/cover, synced to a hidden field the same way as the others
 
 ## Authentication & Authorization
 
@@ -115,6 +125,7 @@ PATCH /books/:id         BooksController#update      (moderator+)
 DELETE /books/:id        BooksController#destroy     (moderator+)
 
 resources :readings      ReadingsController           (owner or moderator+)
+resources :series        SeriesController             (public read, moderator+ write)
 
 GET  /book_search        BookSearchController#index   (Turbo Frame search)
 
@@ -151,7 +162,7 @@ namespace :admin
 Inherit from `Admin::BaseController` — it enforces `moderator_or_above?` and provides `require_admin!`.
 
 ### Open Library integration
-`OpenLibraryService.search(query)` returns an array of hashes with `:title`, `:author`, `:cover_url`. `BookSearchController#index` (`/book_search.json`) serves results as JSON, consumed directly by the React `BookSearch` component (`app/javascript/components/BookSearch.tsx`), which debounces input at 300ms client-side.
+`OpenLibraryService.search(query)` returns an array of hashes with `:title`, `:author`, `:cover_url`, `:open_library_key`. `BookSearchController#index` (`/book_search.json`) serves results as JSON, consumed directly by the React `BookSearch` component (`app/javascript/components/BookSearch.tsx`), which debounces input at 300ms client-side. `OpenLibraryService.work_detail(key)` fetches a work's `description`/`subjects` (capped at `MAX_SUBJECTS`) for `BooksController#create` to backfill once a book is selected.
 
 ### React islands
 For page-level navigation, default to out-of-the-box Rails + Hotwire/Stimulus, with React reserved for self-contained interaction islands — Stimulus is used only as a thin mount/bridge, never for the interaction logic itself. This pattern still governs any *new* interactive widget; it isn't a constraint on porting the rest of `community_bookshelf`'s Hotwire/Turbo views as-is (see Project Goal above). Pattern (see `book_search_controller.tsx` + `BookSearch.tsx`):

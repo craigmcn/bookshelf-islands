@@ -2,6 +2,7 @@
   <%= form.hidden_field :title, data: { book_search_target: "title" } %>
   <%= form.hidden_field :author, data: { book_search_target: "author" } %>
   <%= form.hidden_field :cover_url, data: { book_search_target: "coverUrl" } %>
+  <%= form.hidden_field :open_library_key, data: { book_search_target: "openLibraryKey" } %>
 
   <% if book.errors.any? %>
     <div class="alert alert-danger">
@@ -15,6 +16,33 @@
   <% end %>
 
   <div data-book-search-target="root"></div>
+
+  <div class="row">
+    <div class="col-md-4 mb-3">
+      <%= form.label :isbn, class: "form-label" %>
+      <%= form.text_field :isbn, class: "form-control" %>
+    </div>
+    <div class="col-md-4 mb-3">
+      <%= form.label :page_count, "Page Count", class: "form-label" %>
+      <%= form.number_field :page_count, min: 1, class: "form-control" %>
+    </div>
+    <div class="col-md-4 mb-3">
+      <%= form.label :published_on, "Publish Date", class: "form-label" %>
+      <%= form.date_field :published_on, class: "form-control" %>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-md-8 mb-3">
+      <%= form.label :series_id, "Series", class: "form-label" %>
+      <%= form.collection_select :series_id, Series.order(:name), :id, :name,
+            {include_blank: "None"}, class: "form-select" %>
+    </div>
+    <div class="col-md-4 mb-3">
+      <%= form.label :series_position, "Position in Series", class: "form-label" %>
+      <%= form.number_field :series_position, min: 1, class: "form-control" %>
+    </div>
+  </div>
 
   <div data-controller="tag-input" data-tag-input-category-value="genre" data-tag-input-label-value="Genres">
     <%= form.hidden_field :tag_list, data: { tag_input_target: "tagList" } %>

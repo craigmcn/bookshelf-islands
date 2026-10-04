@@ -1,11 +1,22 @@
 class Book < ApplicationRecord
   belongs_to :added_by, class_name: "User"
+  belongs_to :series, optional: true
   has_many :readings, dependent: :destroy
   has_many :taggings, dependent: :destroy
   has_many :tags, through: :taggings
 
-  validates :title, :author, presence: true
+  # Transient — carries the selected Open Library search result's work key from
+  # the form through to #create, where it's used to fetch description/subjects.
+  # Not persisted, so it round-trips through a failed save/re-render like any
+  # other form field.
+  # ported from community_bookshelf app/models/book.rb (open_library_key)
+  attr_accessor :open_library_key
 
+  validates :title, :author, presence: true
+  # ported from community_bookshelf app/models/book.rb (page_count validation)
+  validates :page_count, numericality: {only_integer: true, greater_than: 0}, allow_nil: true
+
+  before_validation :clear_series_position_without_series
   after_save :sync_tag_list, if: -> { !@tag_list.nil? }
   after_save :sync_mood_list, if: -> { !@mood_list.nil? }
   after_save :sync_pace_list, if: -> { !@pace_list.nil? }
@@ -107,5 +118,10 @@ class Book < ApplicationRecord
     Tag.find_or_create_by(name: name) { |tag| tag.category = category }
   rescue ActiveRecord::RecordNotUnique
     Tag.find_by!(name: name)
+  end
+
+  # ported from community_bookshelf app/models/book.rb (clear_series_position_without_series)
+  def clear_series_position_without_series
+    self.series_position = nil if series_id.blank?
   end
 end

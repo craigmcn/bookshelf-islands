@@ -27,6 +27,7 @@ const SORT_OPTIONS: Array<{ value: string; label: string }> = [
   { value: "title", label: "Title" },
   { value: "author", label: "Author" },
   { value: "newest", label: "Recently Added" },
+  { value: "published", label: "Publication Date" },
 ]
 
 const DEBOUNCE_MS = 300

@@ -1,4 +1,5 @@
 require "test_helper"
+require "webmock/minitest"
 
 class BooksControllerTest < ActionDispatch::IntegrationTest
   setup do
@@ -76,6 +77,68 @@ class BooksControllerTest < ActionDispatch::IntegrationTest
     post books_url, params: {book: {title: "New Book", author: "Some Author", added_by_id: users(:member).id, tag_list: "sci-fi, adventure"}}
 
     assert_equal ["adventure", "sci-fi"], Book.last.tags.order(:name).pluck(:name)
+  end
+
+  test "member creating a book with an open_library_key pulls in description and subjects" do
+    stub_request(:get, "https://openlibrary.org/works/OL468431W.json")
+      .to_return(
+        status: 200,
+        headers: {"Content-Type" => "application/json"},
+        body: {description: "A novel about the American Dream.", subjects: ["Fiction", "Classics"]}.to_json
+      )
+
+    sign_in_as users(:member)
+    assert_difference "Book.count" do
+      post books_url, params: {book: {
+        title: "New Book", author: "Some Author", added_by_id: users(:member).id, cover_url: "",
+        open_library_key: "/works/OL468431W"
+      }}
+    end
+    assert_redirected_to book_url(Book.last)
+
+    book = Book.last
+    assert_equal "A novel about the American Dream.", book.description
+    assert_equal ["Fiction", "Classics"], book.subjects
+  end
+
+  test "open_library_key round-trips through a failed create so a retry can still fetch detail" do
+    stub_request(:get, "https://openlibrary.org/works/OL468431W.json")
+      .to_return(status: 200, headers: {"Content-Type" => "application/json"}, body: "{}")
+
+    sign_in_as users(:member)
+    assert_no_difference "Book.count" do
+      post books_url, params: {book: {
+        title: "", author: "Some Author", cover_url: "", open_library_key: "/works/OL468431W"
+      }}
+    end
+    assert_response :unprocessable_content
+    assert_select "input[name=?][value=?]", "book[open_library_key]", "/works/OL468431W"
+  end
+
+  test "admin can update a book's isbn, page_count, and published_on" do
+    sign_in_as users(:admin)
+    patch book_url(@book), params: {book: {
+      title: @book.title, author: @book.author, added_by_id: @book.added_by_id, cover_url: @book.cover_url,
+      isbn: "978-0743273565", page_count: 180, published_on: "1925-04-10"
+    }}
+
+    assert_redirected_to book_url(@book)
+    @book.reload
+    assert_equal "978-0743273565", @book.isbn
+    assert_equal 180, @book.page_count
+    assert_equal Date.new(1925, 4, 10), @book.published_on
+  end
+
+  test "admin can assign a book to a series" do
+    sign_in_as users(:admin)
+    patch book_url(@book), params: {book: {
+      title: @book.title, author: @book.author, added_by_id: @book.added_by_id, cover_url: @book.cover_url,
+      series_id: series(:one).id, series_position: 2
+    }}
+
+    @book.reload
+    assert_equal series(:one), @book.series
+    assert_equal 2, @book.series_position
   end
 
   test "member can create a book with mood and pace tags" do

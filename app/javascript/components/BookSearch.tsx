@@ -4,29 +4,45 @@ export interface BookSelection {
   title: string
   author: string
   coverUrl: string
+  openLibraryKey: string
 }
 
 interface SearchResult {
   title: string
   author: string
   cover_url: string | null
+  open_library_key: string | null
 }
 
 interface BookSearchProps {
   initialTitle?: string
   initialAuthor?: string
   initialCoverUrl?: string
+  initialOpenLibraryKey?: string
   onChange: (selection: BookSelection | null) => void
 }
 
 const DEBOUNCE_MS = 300
 
-export default function BookSearch({ initialTitle, initialAuthor, initialCoverUrl, onChange }: BookSearchProps) {
+export default function BookSearch({
+  initialTitle,
+  initialAuthor,
+  initialCoverUrl,
+  initialOpenLibraryKey,
+  onChange,
+}: BookSearchProps) {
   const [query, setQuery] = useState("")
   const [results, setResults] = useState<SearchResult[]>([])
   const [loading, setLoading] = useState(false)
   const [selected, setSelected] = useState<BookSelection | null>(
-    initialTitle ? { title: initialTitle, author: initialAuthor ?? "", coverUrl: initialCoverUrl ?? "" } : null
+    initialTitle
+      ? {
+          title: initialTitle,
+          author: initialAuthor ?? "",
+          coverUrl: initialCoverUrl ?? "",
+          openLibraryKey: initialOpenLibraryKey ?? "",
+        }
+      : null
   )
 
   useEffect(() => {
@@ -57,7 +73,12 @@ export default function BookSearch({ initialTitle, initialAuthor, initialCoverUr
   }, [query, selected])
 
   const selectBook = (result: SearchResult) => {
-    const selection: BookSelection = { title: result.title, author: result.author, coverUrl: result.cover_url ?? "" }
+    const selection: BookSelection = {
+      title: result.title,
+      author: result.author,
+      coverUrl: result.cover_url ?? "",
+      openLibraryKey: result.open_library_key ?? "",
+    }
     setSelected(selection)
     setQuery("")
     setResults([])

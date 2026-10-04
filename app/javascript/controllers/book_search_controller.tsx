@@ -3,12 +3,13 @@ import { createRoot, type Root } from "react-dom/client"
 import BookSearch, { type BookSelection } from "../components/BookSearch"
 
 export default class extends Controller<HTMLElement> {
-  static targets = ["root", "title", "author", "coverUrl"]
+  static targets = ["root", "title", "author", "coverUrl", "openLibraryKey"]
 
   declare readonly rootTarget: HTMLElement
   declare readonly titleTarget: HTMLInputElement
   declare readonly authorTarget: HTMLInputElement
   declare readonly coverUrlTarget: HTMLInputElement
+  declare readonly openLibraryKeyTarget: HTMLInputElement
 
   #reactRoot: Root | null = null
 
@@ -28,6 +29,7 @@ export default class extends Controller<HTMLElement> {
         initialTitle={this.titleTarget.value}
         initialAuthor={this.authorTarget.value}
         initialCoverUrl={this.coverUrlTarget.value}
+        initialOpenLibraryKey={this.openLibraryKeyTarget.value}
         onChange={(selection) => this.#handleChange(selection)}
       />
     )
@@ -37,5 +39,6 @@ export default class extends Controller<HTMLElement> {
     this.titleTarget.value = selection?.title ?? ""
     this.authorTarget.value = selection?.author ?? ""
     this.coverUrlTarget.value = selection?.coverUrl ?? ""
+    this.openLibraryKeyTarget.value = selection?.openLibraryKey ?? ""
   }
 }

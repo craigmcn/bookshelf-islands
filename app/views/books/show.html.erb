@@ -16,6 +16,39 @@
     <p class="fs-5 text-muted"><%= @book.author %></p>
     <p class="text-muted"><small>Added by <%= @book.added_by.email %></small></p>
 
+    <% if @book.series.present? %>
+      <p>
+        <%= link_to @book.series.name, @book.series, class: "text-decoration-none" %>
+        <% if @book.series_position.present? %>
+          <span class="text-muted">— Book <%= @book.series_position %></span>
+        <% end %>
+      </p>
+    <% end %>
+
+    <ul class="list-unstyled text-muted small mb-0">
+      <% if @book.isbn.present? %>
+        <li>ISBN: <%= @book.isbn %></li>
+      <% end %>
+      <% if @book.page_count.present? %>
+        <li><%= pluralize(@book.page_count, "page") %></li>
+      <% end %>
+      <% if @book.published_on.present? %>
+        <li>Published <%= @book.published_on.strftime("%B %-d, %Y") %></li>
+      <% end %>
+    </ul>
+
+    <% if @book.description.present? %>
+      <p class="mt-3"><%= @book.description %></p>
+    <% end %>
+
+    <% if @book.subjects.any? %>
+      <div class="d-flex flex-wrap gap-1 mt-2 mb-2">
+        <% @book.subjects.each do |subject| %>
+          <span class="badge text-bg-secondary"><%= subject %></span>
+        <% end %>
+      </div>
+    <% end %>
+
     <% all_tags = @book.tags.to_a %>
     <% {genre: "text-bg-primary", mood: "text-bg-info", pace: "text-bg-warning"}.each do |category, badge_class| %>
       <% category_tags = all_tags.select { |tag| tag.category == category.to_s }.sort_by(&:name) %>
