@@ -90,6 +90,15 @@ export default function BookSearch({
     onChange(null)
   }
 
+  // ported from community_bookshelf app/javascript/controllers/book_search_controller.js (liveRegion/announceResults) —
+  // blank while a search is in flight, filled once it settles, so screen readers learn when results update
+  // (the only Stimulus/React-driven dynamic UI in the app that was previously silent to assistive tech).
+  const liveMessage = loading || query.trim().length < 2
+    ? ""
+    : results.length > 0
+      ? `${results.length} result${results.length === 1 ? "" : "s"} found.`
+      : "No results found."
+
   if (selected) {
     return (
       <div className="mb-3">
@@ -136,6 +145,9 @@ export default function BookSearch({
       {results.length === 0 && !loading && query.trim().length >= 2 && (
         <p className="text-muted small mt-2 mb-0">No results found.</p>
       )}
+      <div className="visually-hidden" aria-live="polite" role="status">
+        {liveMessage}
+      </div>
       {results.length > 0 && (
         <div className="list-group mt-2" aria-label="Book search results">
           {results.map((result, index) => (

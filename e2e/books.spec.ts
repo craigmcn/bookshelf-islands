@@ -127,6 +127,18 @@ test.describe("Books", () => {
     await expect(page.getByRole("link", { name: "The Hobbit" })).toBeVisible();
   });
 
+  test("book search announces result count via a live region for screen readers", async ({ page }) => {
+    await signIn(page, users.member);
+    await page.goto("/books/new");
+
+    const liveRegion = page.locator('[aria-live="polite"]');
+    await page.getByLabel("Search for a Book").fill("hobbit");
+    await expect(liveRegion).toHaveText("1 result found.");
+
+    await page.getByLabel("Search for a Book").fill("there is no such book");
+    await expect(liveRegion).toHaveText("No results found.");
+  });
+
   test("member can search Open Library and add a book", async ({ page }) => {
     await signIn(page, users.member);
     await page.goto("/books/new");
