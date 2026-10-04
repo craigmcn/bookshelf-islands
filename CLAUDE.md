@@ -99,6 +99,9 @@ Readings use `deleted_at` for soft deletes. Default scopes exclude deleted recor
 - `User#delete_account!` reassigns the user's catalog books to a shared placeholder account (`User.deleted_placeholder`, memoized by a well-known email) so the catalog survives, explicitly destroys their soft-deleted readings first (the default scope would otherwise hide them from `dependent: :destroy` and leave a dangling FK), then destroys the user; raises `User::SoleAdminError` if the user is `sole_admin?` (the last admin — deleting would lock every `/admin` route)
 - Email confirmation is informational-only, not enforced: `send_email_confirmation` (fired `after_create` unless `skip_confirmation_email`, set by seeds/the deleted placeholder) emails a `confirm_email/:token` link via `UserMailer`; `EmailConfirmationsController#create` resends with a 1-minute cooldown (`User::RESEND_COOLDOWN`)
 
+### Social (in progress)
+`doc/feature_roadmap.md`'s Social category (#51-#56 here) is being ported in dependency order, one PR per step, since each piece depends on the last: (1) `Notification` model — polymorphic, no trigger wired yet; (2) Follow + minimal profile page (favorite genres, followers/following — no streak/badge/challenge sections, those aren't ported); (3) Activity feed; (4) review likes/comments as React islands; (5) buddy reads; (6) book clubs with spoiler-gated posts. The original Notifications category (#62-#65, #84 — triggers + bell/inbox UI) resumes once this lands. **Known gap carried over from community_bookshelf** (see community_bookshelf#191): `User#delete_account!` must also clear `Notification.where(actor_id: id)` once a real trigger exists (step 2) — a `NOT NULL` FK on `actor_id` with no cascade means any user who has ever followed/commented/posted would otherwise fail to delete their own account.
+
 ## Authentication & Authorization
 
 ### Clearance
