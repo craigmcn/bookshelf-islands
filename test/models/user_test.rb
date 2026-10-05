@@ -24,6 +24,31 @@ class UserTest < ActiveSupport::TestCase
     assert user.roles.exists?(name: "member")
   end
 
+  test "favorite_genre_list assigns genre tags, creating them as needed" do
+    user = users(:member)
+    user.update!(favorite_genre_list: "Fantasy, sci-fi")
+
+    assert_equal ["fantasy", "sci-fi"], user.favorite_genre_tags.order(:name).pluck(:name)
+    assert user.favorite_genre_tags.all?(&:genre?)
+  end
+
+  test "favorite_genre_list removes tags no longer listed and reuses an existing tag" do
+    user = users(:member)
+    user.update!(favorite_genre_list: "fantasy, mystery")
+    user.update!(favorite_genre_list: "fantasy")
+
+    assert_equal ["fantasy"], user.favorite_genre_tags.pluck(:name)
+  end
+
+  test "favorite_genre_list is untouched when omitted from an update" do
+    user = users(:member)
+    user.update!(favorite_genre_list: "fantasy")
+
+    user.update!(name: "Sam Reader")
+
+    assert_equal ["fantasy"], user.reload.favorite_genre_tags.pluck(:name)
+  end
+
   test "display_name falls back to email when name is blank" do
     user = users(:member)
     assert_nil user.name
