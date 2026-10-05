@@ -100,11 +100,12 @@ Readings use `deleted_at` for soft deletes. Default scopes exclude deleted recor
 - Email confirmation is informational-only, not enforced: `send_email_confirmation` (fired `after_create` unless `skip_confirmation_email`, set by seeds/the deleted placeholder) emails a `confirm_email/:token` link via `UserMailer`; `EmailConfirmationsController#create` resends with a 1-minute cooldown (`User::RESEND_COOLDOWN`)
 
 ### Social (in progress)
-`doc/feature_roadmap.md`'s Social category (#51-#56 here) is being ported in dependency order, one PR per step, since each piece depends on the last: (1) `Notification` model — done; (2) Follow + minimal profile page — done, see below; (3) Activity feed; (4) review likes/comments as React islands; (5) buddy reads; (6) book clubs with spoiler-gated posts. The original Notifications category (#62-#65, #84 — triggers + bell/inbox UI) resumes once this lands.
+`doc/feature_roadmap.md`'s Social category (#51-#56 here) is being ported in dependency order, one PR per step, since each piece depends on the last: (1) `Notification` model — done; (2) Follow + minimal profile page — done; (3) Activity feed — done, see below; (4) review likes/comments as React islands; (5) buddy reads; (6) book clubs with spoiler-gated posts. The original Notifications category (#62-#65, #84 — triggers + bell/inbox UI) resumes once this lands.
 
 - `Follow` (`follower`/`followed`, both `User`) creates a `new_follower` `Notification` on create, destroyed along with it (`has_one :notification, as: :notifiable, dependent: :destroy`) — `User#following?`/`#followers`/`#following` read through `active_follows`/`passive_follows`. Deleting either side of a follow relationship cascades cleanly through `dependent: :destroy` all the way to the notification, with no special-casing needed in `delete_account!` (verified empirically — see the corrected community_bookshelf#191).
 - `User#favorite_genre_list` mirrors `Book#tag_list`'s virtual-attribute pattern exactly (comma-separated genre tag names, synced via `after_save`), reusing the same `Tag` model (category `genre`).
 - `ProfilesController#show` (`/users/:id`) is a minimal port: bio/avatar/favorite genres, finished/currently-reading counts, up to 5 public reviews, a follow/unfollow button, and followers/following tabs. Deliberately omits `current_streak`/`badges`/`current_year_challenge` — Gamification roadmap category, not ported here. `User.excluding_deleted_placeholder` keeps the placeholder account's profile a 404.
+- `Activity` (feed entries: `added_book`/`started_reading`/`finished_reading`/`reviewed`) is created by `Reading`'s own callbacks (`after_create`/`after_update`), not a separate service — `GET /feed` (`ActivitiesController`) shows `Activity.where(user: current_user.following)`. Omits the reference implementation's `skip_activity_logging` flag (used there to suppress entries during bulk import) since Import/export isn't ported here yet — add it back if/when that lands. `app/views/shared/_pagy_nav.html.erb` + the `pagination-nav` Stimulus controller (plain JS, no React — it only ever hides/shows existing server-rendered links on overflow, never builds hrefs in JS) are shared pagination UI, first used here.
 
 ## Authentication & Authorization
 
@@ -150,6 +151,7 @@ GET  /users/:id/followers, /following  ProfilesController#followers/#following
 POST/DELETE /users/:user_id/follow     FollowsController#create/#destroy
 
 GET  /book_search        BookSearchController#index   (Turbo Frame search)
+GET  /feed               ActivitiesController#index   (signed-in users; followed users' reading activity)
 
 namespace :admin
   /admin/dashboard       AdminDashboardController     (moderator+)

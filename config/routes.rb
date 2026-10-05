@@ -7,6 +7,7 @@ Rails.application.routes.draw do
   resources :shelves do
     resources :shelf_books, only: [:create, :destroy], path: "books"
   end
+  get "feed", to: "activities#index"
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 
   get "up" => "rails/health#show", :as => :rails_health_check
