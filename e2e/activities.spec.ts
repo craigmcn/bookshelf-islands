@@ -12,6 +12,7 @@ test.describe("Activity feed", () => {
     await moderatorPage.getByLabel("Status").selectOption({ label: "Want to read" });
     await moderatorPage.getByRole("button", { name: "Create Reading" }).click();
     await expect(moderatorPage).toHaveURL(/\/readings\/\d+$/);
+    const moderatorReadingUrl = moderatorPage.url();
 
     await signIn(page, users.member);
     await page.goto("/books");
@@ -25,8 +26,12 @@ test.describe("Activity feed", () => {
     await expect(page.getByRole("link", { name: users.moderator.email })).toBeVisible();
     await expect(page.getByText("added 1984 to their shelf")).toBeVisible();
 
-    // revert the follow so the fixture user stays stable for other specs/runs
+    // revert the follow and the created reading so the fixture users stay stable for other specs/runs
     await page.goto(moderatorProfileUrl);
     await page.getByRole("button", { name: "Following" }).click();
+
+    await moderatorPage.goto(moderatorReadingUrl);
+    moderatorPage.once("dialog", (dialog) => dialog.accept());
+    await moderatorPage.getByRole("button", { name: "Delete" }).click();
   });
 });
