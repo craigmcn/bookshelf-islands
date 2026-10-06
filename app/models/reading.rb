@@ -1,6 +1,8 @@
 class Reading < ApplicationRecord
   belongs_to :user
   belongs_to :book
+  # ported from community_bookshelf app/models/reading.rb (activities association)
+  has_many :activities, dependent: :destroy
 
   default_scope { where(deleted_at: nil) }
   scope :with_deleted, -> { unscoped }
@@ -15,7 +17,15 @@ class Reading < ApplicationRecord
   validates :progress_percent, numericality: {only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 100}, allow_nil: true
   validate :finished_on_not_before_started_on
 
+  # ported from community_bookshelf app/models/reading.rb (activity-feed callbacks —
+  # skip_activity_logging, used there to suppress these during bulk import, omitted:
+  # Import/export isn't ported here yet, so there's no bulk-creation path to guard against)
+  after_create :record_added_book_activity
+  after_update :record_status_change_activity, if: :saved_change_to_status?
+  after_update :record_review_activity, if: -> { review.present? && is_review_public? && review_before_last_save.blank? }
+
   def soft_delete
+    activities.destroy_all
     update!(deleted_at: Time.current)
   end
 
@@ -36,6 +46,20 @@ class Reading < ApplicationRecord
   end
 
   private
+
+  def record_added_book_activity
+    activities.create!(user: user, action: "added_book")
+  end
+
+  def record_status_change_activity
+    return unless status.in?(%w[reading finished])
+
+    activities.create!(user: user, action: (status == "reading") ? "started_reading" : "finished_reading")
+  end
+
+  def record_review_activity
+    activities.create!(user: user, action: "reviewed")
+  end
 
   def finished_on_not_before_started_on
     return if started_on.blank? || finished_on.blank?

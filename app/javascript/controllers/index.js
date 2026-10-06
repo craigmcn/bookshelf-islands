@@ -30,3 +30,6 @@ application.register("progress", ProgressController)
 
 import PrivacyToggleController from "./privacy_toggle_controller"
 application.register("privacy-toggle", PrivacyToggleController)
+
+import PaginationNavController from "./pagination_nav_controller"
+application.register("pagination-nav", PaginationNavController)
