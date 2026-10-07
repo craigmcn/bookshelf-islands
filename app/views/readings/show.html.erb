@@ -75,6 +75,31 @@
       <% end %>
     </dl>
 
+    <% if @reading.is_review_public? && @reading.review.present? %>
+      <div class="mt-3" data-controller="review-like"
+           data-review-like-url-value="<%= reading_review_like_path(@reading) %>"
+           data-review-like-liked-value="<%= @reading.review_likes.exists?(user: current_user) %>"
+           data-review-like-count-value="<%= @reading.review_likes.count %>"
+           data-review-like-can-like-value="<%= policy(ReviewLike.new(reading: @reading)).create? %>">
+        <div data-review-like-target="root"></div>
+      </div>
+
+      <hr class="my-4">
+      <h3 class="h5"><i class="fasl fa-comments me-2 opacity-75"></i>Comments</h3>
+      <div data-controller="review-comments"
+           data-review-comments-url-value="<%= reading_review_comments_path(@reading) %>"
+           data-review-comments-can-comment-value="<%= policy(ReviewComment.new(reading: @reading)).create? %>"
+           data-review-comments-comments-value="<%= @review_comments.map { |c|
+             {
+               id: c.id, body: c.body, created_at: c.created_at.iso8601,
+               author_name: c.user.display_name, author_path: user_path(c.user),
+               can_destroy: policy(c).destroy?, delete_path: reading_review_comment_path(@reading, c)
+             }
+           }.to_json %>">
+        <div data-review-comments-target="root"></div>
+      </div>
+    <% end %>
+
     <div class="d-flex gap-2 mt-3">
       <% if current_user&.moderator_or_above? %>
         <%= link_to admin_readings_path, class: "btn btn-outline-secondary" do %>

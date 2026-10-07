@@ -7,29 +7,35 @@ import { application } from "./application"
 import BookSearchController from "./book_search_controller"
 application.register("book-search", BookSearchController)
 
-import RatingController from "./rating_controller"
-application.register("rating", RatingController)
+import CatalogBrowserController from "./catalog_browser_controller"
+application.register("catalog-browser", CatalogBrowserController)
 
 import DeleteReadingController from "./delete_reading_controller"
 application.register("delete-reading", DeleteReadingController)
 
-import CatalogBrowserController from "./catalog_browser_controller"
-application.register("catalog-browser", CatalogBrowserController)
-
-import ShelfBrowserController from "./shelf_browser_controller"
-application.register("shelf-browser", ShelfBrowserController)
-
-import TagInputController from "./tag_input_controller"
-application.register("tag-input", TagInputController)
-
-import ShelfPickerController from "./shelf_picker_controller"
-application.register("shelf-picker", ShelfPickerController)
-
-import ProgressController from "./progress_controller"
-application.register("progress", ProgressController)
+import PaginationNavController from "./pagination_nav_controller"
+application.register("pagination-nav", PaginationNavController)
 
 import PrivacyToggleController from "./privacy_toggle_controller"
 application.register("privacy-toggle", PrivacyToggleController)
 
-import PaginationNavController from "./pagination_nav_controller"
-application.register("pagination-nav", PaginationNavController)
+import ProgressController from "./progress_controller"
+application.register("progress", ProgressController)
+
+import RatingController from "./rating_controller"
+application.register("rating", RatingController)
+
+import ReviewCommentsController from "./review_comments_controller"
+application.register("review-comments", ReviewCommentsController)
+
+import ReviewLikeController from "./review_like_controller"
+application.register("review-like", ReviewLikeController)
+
+import ShelfBrowserController from "./shelf_browser_controller"
+application.register("shelf-browser", ShelfBrowserController)
+
+import ShelfPickerController from "./shelf_picker_controller"
+application.register("shelf-picker", ShelfPickerController)
+
+import TagInputController from "./tag_input_controller"
+application.register("tag-input", TagInputController)

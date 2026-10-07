@@ -111,4 +111,15 @@ class ReadingTest < ActiveSupport::TestCase
       Reading.create!(user: users(:member), book: books(:two), status: :want_to_read)
     end
   end
+
+  test "soft_delete removes the reading's review likes and comments" do
+    reading = Reading.create!(user: users(:member), book: books(:two), status: :reading, review: "Loved it.")
+    ReviewLike.create!(user: users(:moderator), reading: reading)
+    ReviewComment.create!(user: users(:moderator), reading: reading, body: "Nice review!")
+
+    reading.soft_delete
+
+    assert_empty ReviewLike.where(reading_id: reading.id)
+    assert_empty ReviewComment.where(reading_id: reading.id)
+  end
 end
