@@ -25,15 +25,7 @@
             <%# Both sides render unconditionally (never "other_participant") so the includes(:initiator, :partner)
                 eager-load above is never flagged as unused by an N+1 detector. %>
             <td><%= buddy_read.initiator.display_name %> &harr; <%= buddy_read.partner.display_name %></td>
-            <%
-              badge_class = case buddy_read.status
-                            when "pending" then "text-bg-warning"
-                            when "accepted" then "text-bg-success"
-                            when "declined", "cancelled" then "text-bg-secondary"
-                            when "completed" then "text-bg-primary"
-                            end
-            %>
-            <td><span class="badge <%= badge_class %>"><%= buddy_read.status.humanize %></span></td>
+            <td><span class="badge <%= buddy_read_status_badge_class(buddy_read.status) %>"><%= buddy_read.status.humanize %></span></td>
             <td>
               <%= link_to buddy_read_path(buddy_read), class: "btn btn-sm btn-outline-secondary" do %>
                 <i class="fasl fa-eye"></i>
