@@ -1,12 +1,11 @@
 require "test_helper"
 
-# No notification trigger exists yet (Follow/ReviewComment/ClubPost all land in
-# later PRs as the Social roadmap category is ported), so these tests build
-# Notification records directly rather than through a trigger — the recipient
-# themself stands in for `notifiable` below, since nothing else real exists to
-# point the polymorphic association at yet. Trigger-specific tests (e.g. "a new
-# follow creates a notification") belong in each feature's own test file once
-# it exists.
+# Follow/ReviewComment/BuddyRead already have real triggers, each tested in its
+# own file (e.g. "a new follow creates a notification"); ClubPost is still the
+# one notification_type with no trigger (lands in the final Social PR). These
+# tests build Notification records directly rather than through a trigger —
+# the recipient themself stands in for `notifiable` below, since that's enough
+# to exercise the model's own behavior independent of any one trigger.
 class NotificationTest < ActiveSupport::TestCase
   def build_notification(**attrs)
     Notification.new(
@@ -68,5 +67,14 @@ class NotificationTest < ActiveSupport::TestCase
     assert_equal "#{users(:member).display_name} started following you", notification.message
     assert_equal "user", notification.target_type
     assert_equal users(:member).id, notification.target_id
+  end
+
+  test "message, target_type, and target_id for buddy_read_invite" do
+    buddy_read = BuddyRead.create!(book: books(:one), initiator: users(:member), partner: users(:moderator))
+    notification = Notification.where(notification_type: "buddy_read_invite", notifiable: buddy_read).last
+
+    assert_equal "#{users(:member).display_name} invited you to a buddy read of #{books(:one).title}", notification.message
+    assert_equal "buddy_read", notification.target_type
+    assert_equal buddy_read.id, notification.target_id
   end
 end

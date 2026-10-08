@@ -1,0 +1,54 @@
+<% content_for :title, "Buddy Reads" %>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h1 class="mb-0"><i class="fasl fa-people-arrows me-2 opacity-75"></i>Buddy Reads</h1>
+  <%= link_to new_buddy_read_path, class: "btn btn-primary" do %>
+    <i class="fasl fa-plus me-1"></i>Invite a Buddy
+  <% end %>
+</div>
+
+<% if @buddy_reads.any? %>
+  <div class="table-responsive">
+    <table class="table table-striped align-middle">
+      <thead>
+        <tr>
+          <th>Book</th>
+          <th>Readers</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @buddy_reads.each do |buddy_read| %>
+          <tr>
+            <td><%= link_to buddy_read.book.title, buddy_read.book, class: "text-decoration-none" %></td>
+            <%# Both sides render unconditionally (never "other_participant") so the includes(:initiator, :partner)
+                eager-load above is never flagged as unused by an N+1 detector. %>
+            <td><%= buddy_read.initiator.display_name %> &harr; <%= buddy_read.partner.display_name %></td>
+            <%
+              badge_class = case buddy_read.status
+                            when "pending" then "text-bg-warning"
+                            when "accepted" then "text-bg-success"
+                            when "declined", "cancelled" then "text-bg-secondary"
+                            when "completed" then "text-bg-primary"
+                            end
+            %>
+            <td><span class="badge <%= badge_class %>"><%= buddy_read.status.humanize %></span></td>
+            <td>
+              <%= link_to buddy_read_path(buddy_read), class: "btn btn-sm btn-outline-secondary" do %>
+                <i class="fasl fa-eye"></i>
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% else %>
+  <div class="text-center text-muted py-5">
+    <p class="fs-5">You don't have any buddy reads yet.</p>
+    <%= link_to new_buddy_read_path, class: "btn btn-primary" do %>
+      <i class="fasl fa-plus me-1"></i>Invite a Buddy
+    <% end %>
+  </div>
+<% end %>

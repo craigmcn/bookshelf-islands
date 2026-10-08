@@ -1,0 +1,63 @@
+<% content_for :title, @buddy_read.book.title %>
+
+<%
+  badge_class = case @buddy_read.status
+                when "pending" then "text-bg-warning"
+                when "accepted" then "text-bg-success"
+                when "declined", "cancelled" then "text-bg-secondary"
+                when "completed" then "text-bg-primary"
+                end
+%>
+
+<div class="card">
+  <div class="card-body">
+    <h2 class="card-title"><%= link_to @buddy_read.book.title, @buddy_read.book, class: "text-decoration-none text-dark" %></h2>
+    <p class="text-muted">
+      With <%= @buddy_read.other_participant(current_user).display_name %>
+      <span class="badge <%= badge_class %> ms-2"><%= @buddy_read.status.humanize %></span>
+    </p>
+
+    <div class="d-flex gap-2 mt-3">
+      <% if @buddy_read.pending? && @buddy_read.partner == current_user %>
+        <%= button_to "Accept", buddy_read_path(@buddy_read), method: :patch, params: {status: "accepted"}, class: "btn btn-success" %>
+        <%= button_to "Decline", buddy_read_path(@buddy_read), method: :patch, params: {status: "declined"}, class: "btn btn-outline-danger" %>
+      <% end %>
+      <% if @buddy_read.pending? || @buddy_read.accepted? %>
+        <%= button_to "Cancel", buddy_read_path(@buddy_read), method: :patch, params: {status: "cancelled"},
+              class: "btn btn-outline-secondary", form: { data: { turbo_confirm: "Cancel this buddy read?" } } %>
+      <% end %>
+      <% if @buddy_read.accepted? %>
+        <%= button_to "Mark Completed", buddy_read_path(@buddy_read), method: :patch, params: {status: "completed"}, class: "btn btn-outline-primary" %>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<hr class="my-4">
+<h3 class="h5"><i class="fasl fa-comments me-2 opacity-75"></i>Messages</h3>
+
+<% if @messages.any? %>
+  <ul class="list-unstyled">
+    <% @messages.each do |message| %>
+      <li class="mb-3">
+        <strong><%= message.user.display_name %></strong>
+        <span class="text-muted small ms-2"><%= time_ago_in_words(message.created_at) %> ago</span>
+        <p class="mb-0"><%= message.body %></p>
+      </li>
+    <% end %>
+  </ul>
+<% else %>
+  <p class="text-muted small">No messages yet.</p>
+<% end %>
+
+<% if @buddy_read.messageable? %>
+  <%= form_with(model: @message, url: buddy_read_messages_path(@buddy_read)) do |form| %>
+    <div class="mb-3">
+      <%= form.label :body, "Add a message", class: "form-label" %>
+      <%= form.textarea :body, class: "form-control", rows: 3 %>
+    </div>
+    <%= form.submit "Post Message", class: "btn btn-primary btn-sm" %>
+  <% end %>
+<% else %>
+  <p class="text-muted small">This buddy read is <%= @buddy_read.status %> — no new messages.</p>
+<% end %>
