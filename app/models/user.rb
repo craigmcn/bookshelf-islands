@@ -30,6 +30,10 @@ class User < ApplicationRecord
   has_many :initiated_buddy_reads, class_name: "BuddyRead", foreign_key: :initiator_id, inverse_of: :initiator, dependent: :destroy
   has_many :partnered_buddy_reads, class_name: "BuddyRead", foreign_key: :partner_id, inverse_of: :partner, dependent: :destroy
   has_many :buddy_read_messages, dependent: :destroy
+  has_many :club_memberships, dependent: :destroy
+  has_many :clubs, through: :club_memberships
+  has_many :created_clubs, class_name: "Club", foreign_key: :created_by_id, inverse_of: :created_by
+  has_many :club_posts, dependent: :destroy
   has_many :favorite_genre_tags, through: :favorite_genres, source: :tag
   has_one_attached :avatar
 
@@ -121,19 +125,21 @@ class User < ApplicationRecord
     admin? && self.class.joins(:roles).where(roles: {name: "admin"}).where.not(id: id).none?
   end
 
-  # Reassigns this user's contributed catalog books to a shared placeholder
-  # account (so the catalog isn't disrupted by an account deletion), then
-  # destroys the user — cascading to their own readings/shelves/role
-  # assignments/follows/favorite_genres via dependent: :destroy. Readings'
-  # default scope hides soft-deleted rows from that association, so they're
-  # destroyed explicitly first — otherwise one left behind would still
-  # reference this user's id via its FK and the final destroy! would fail.
+  # Reassigns this user's contributed catalog books and any clubs they
+  # created to a shared placeholder account (so shared community content
+  # isn't disrupted by an account deletion — a club's discussion survives its
+  # creator leaving), then destroys the user — cascading to their own
+  # readings/shelves/role assignments/follows/favorite_genres/club_posts via
+  # dependent: :destroy. Readings' default scope hides soft-deleted rows from
+  # that association, so they're destroyed explicitly first — otherwise one
+  # left behind would still reference this user's id via its FK and the
+  # final destroy! would fail.
   #
   # Notification's actor_id FK needs no equivalent explicit handling despite
   # `notifications` (dependent: :destroy above) only covering the recipient
   # side: dependent: :destroy cascades transitively, and every notifiable
-  # source (Follow, ReviewComment, BuddyRead here, ClubPost once ported) is
-  # itself dependent: :destroy on this user *and* declares dependent: :destroy on
+  # source (Follow, ReviewComment, BuddyRead, ClubPost here) is itself
+  # dependent: :destroy on this user *and* declares dependent: :destroy on
   # its own notifiable notification(s) — destroying this user's Follows
   # destroys their Notifications too, whichever side (actor or recipient)
   # this user was on. Verified empirically before assuming otherwise.
@@ -141,7 +147,9 @@ class User < ApplicationRecord
     raise SoleAdminError, "Can't delete the only admin account." if sole_admin?
 
     transaction do
-      books.update_all(added_by_id: self.class.deleted_placeholder.id)
+      placeholder_id = self.class.deleted_placeholder.id
+      books.update_all(added_by_id: placeholder_id)
+      created_clubs.update_all(created_by_id: placeholder_id)
       Reading.unscoped.where(user_id: id).destroy_all
       destroy!
     end

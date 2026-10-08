@@ -6,6 +6,8 @@ class Book < ApplicationRecord
   has_many :tags, through: :taggings
   # ported from community_bookshelf app/models/book.rb (buddy_reads association)
   has_many :buddy_reads, dependent: :destroy
+  # ported from community_bookshelf app/models/book.rb (clubs association)
+  has_many :clubs, dependent: :destroy
 
   # Transient — carries the selected Open Library search result's work key from
   # the form through to #create, where it's used to fetch description/subjects.

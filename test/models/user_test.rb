@@ -122,6 +122,27 @@ class UserTest < ActiveSupport::TestCase
     assert_equal User.deleted_placeholder, book.reload.added_by
   end
 
+  test "delete_account! reassigns the user's created clubs to the placeholder" do
+    user = users(:member)
+    club = Club.create!(name: "Classics Club", book: books(:one), created_by: user)
+    User.deleted_placeholder # pre-create so the assertion below isn't masked by its own +1
+
+    user.delete_account!
+
+    assert_equal User.deleted_placeholder, club.reload.created_by
+  end
+
+  test "delete_account! destroys the user's club posts without a foreign key error" do
+    owner = User.create!(email: "clubowner@example.com", password: User::DEFAULT_PASSWORD)
+    club = Club.create!(name: "Classics Club", book: books(:one), created_by: owner)
+    post = ClubPost.create!(club: club, user: users(:member), body: "Great book!")
+    User.deleted_placeholder # pre-create so the assertion below isn't masked by its own +1
+
+    users(:member).delete_account!
+
+    assert_not ClubPost.exists?(post.id)
+  end
+
   test "invalid with an avatar over the size limit" do
     user = users(:member)
     user.avatar.attach(
