@@ -1,10 +1,14 @@
 # ported from community_bookshelf app/models/notification.rb
-# review_comment and club_post aren't created by anything yet — ReviewComment
-# and Club/ClubPost land in later PRs as the Social roadmap category is
-# ported. Declaring all three enum values now (rather than growing the enum
-# piecemeal) matches the reference implementation and avoids re-touching this
-# model for each later PR; the case statements below simply have unreachable
-# branches until each trigger exists.
+# club_post isn't created by anything yet — Club/ClubPost lands in the final
+# PR as the Social roadmap category is ported. Declaring the enum value now
+# (rather than growing it piecemeal) matches the reference implementation
+# and avoids re-touching this model for that last PR; the case statements
+# below simply have an unreachable branch until that trigger exists.
+#
+# buddy_read_invite has no equivalent in community_bookshelf at all — it
+# never notifies on a buddy read invite, discoverable only by visiting the
+# index. Added here deliberately as a small improvement on the reference
+# (community_bookshelf#199 tracks bringing it back in line).
 class Notification < ApplicationRecord
   belongs_to :recipient, class_name: "User"
   belongs_to :actor, class_name: "User"
@@ -13,7 +17,8 @@ class Notification < ApplicationRecord
   enum :notification_type, {
     new_follower: "new_follower",
     review_comment: "review_comment",
-    club_post: "club_post"
+    club_post: "club_post",
+    buddy_read_invite: "buddy_read_invite"
   }
 
   validates :notification_type, presence: true
@@ -39,6 +44,7 @@ class Notification < ApplicationRecord
     when "new_follower" then "#{actor.display_name} started following you"
     when "review_comment" then "#{actor.display_name} commented on your review of #{notifiable.reading.book.title}"
     when "club_post" then "#{actor.display_name} posted in #{notifiable.club.name}"
+    when "buddy_read_invite" then "#{actor.display_name} invited you to a buddy read of #{notifiable.book.title}"
     end
   end
 
@@ -50,6 +56,7 @@ class Notification < ApplicationRecord
     when "new_follower" then "user"
     when "review_comment" then "reading"
     when "club_post" then "club"
+    when "buddy_read_invite" then "buddy_read"
     else raise ArgumentError, "Unhandled notification_type: #{notification_type.inspect}"
     end
   end
@@ -59,6 +66,7 @@ class Notification < ApplicationRecord
     when "new_follower" then actor_id
     when "review_comment" then notifiable.reading_id
     when "club_post" then notifiable.club_id
+    when "buddy_read_invite" then notifiable.id
     else raise ArgumentError, "Unhandled notification_type: #{notification_type.inspect}"
     end
   end

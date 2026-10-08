@@ -26,6 +26,10 @@ class User < ApplicationRecord
   # ported from community_bookshelf app/models/user.rb (review_likes/review_comments associations)
   has_many :review_likes, dependent: :destroy
   has_many :review_comments, dependent: :destroy
+  # ported from community_bookshelf app/models/user.rb (buddy_reads associations)
+  has_many :initiated_buddy_reads, class_name: "BuddyRead", foreign_key: :initiator_id, inverse_of: :initiator, dependent: :destroy
+  has_many :partnered_buddy_reads, class_name: "BuddyRead", foreign_key: :partner_id, inverse_of: :partner, dependent: :destroy
+  has_many :buddy_read_messages, dependent: :destroy
   has_many :favorite_genre_tags, through: :favorite_genres, source: :tag
   has_one_attached :avatar
 
@@ -128,8 +132,8 @@ class User < ApplicationRecord
   # Notification's actor_id FK needs no equivalent explicit handling despite
   # `notifications` (dependent: :destroy above) only covering the recipient
   # side: dependent: :destroy cascades transitively, and every notifiable
-  # source (Follow here, ReviewComment/ClubPost once ported) is itself
-  # dependent: :destroy on this user *and* declares dependent: :destroy on
+  # source (Follow, ReviewComment, BuddyRead here, ClubPost once ported) is
+  # itself dependent: :destroy on this user *and* declares dependent: :destroy on
   # its own notifiable notification(s) — destroying this user's Follows
   # destroys their Notifications too, whichever side (actor or recipient)
   # this user was on. Verified empirically before assuming otherwise.
