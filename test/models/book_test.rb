@@ -142,4 +142,17 @@ class BookTest < ActiveSupport::TestCase
 
     assert_not_includes Book.recommended_for(user), would_be_recommended
   end
+
+  test "destroying a book with a club destroys the club, its memberships, and its posts" do
+    book = Book.create!(title: "Test", author: "Author", added_by: users(:member))
+    club = Club.create!(name: "Classics Club", book: book, created_by: users(:member))
+    membership = club.club_memberships.create!(user: users(:moderator))
+    post = ClubPost.create!(club: club, user: users(:member), body: "Great book!")
+
+    book.destroy!
+
+    assert_not Club.exists?(club.id)
+    assert_not ClubMembership.exists?(membership.id)
+    assert_not ClubPost.exists?(post.id)
+  end
 end

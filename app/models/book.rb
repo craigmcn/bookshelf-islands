@@ -6,7 +6,11 @@ class Book < ApplicationRecord
   has_many :tags, through: :taggings
   # ported from community_bookshelf app/models/book.rb (buddy_reads association)
   has_many :buddy_reads, dependent: :destroy
-  # ported from community_bookshelf app/models/book.rb (clubs association)
+  # Deliberate addition beyond the reference, not a port — community_bookshelf's
+  # own Book model has no clubs association at all, so destroying a book with
+  # a club there hits an uncaught ActiveRecord::InvalidForeignKey via
+  # clubs.book_id (BooksController#destroy uses destroy!). Closing that latent
+  # crash here rather than reproducing it.
   has_many :clubs, dependent: :destroy
 
   # Transient — carries the selected Open Library search result's work key from
