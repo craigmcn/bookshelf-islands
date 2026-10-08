@@ -3,6 +3,10 @@ class Reading < ApplicationRecord
   belongs_to :book
   # ported from community_bookshelf app/models/reading.rb (activities association)
   has_many :activities, dependent: :destroy
+  # ported from community_bookshelf app/models/reading.rb (review_likes/review_comments associations)
+  has_many :review_likes, dependent: :destroy
+  has_many :liking_users, through: :review_likes, source: :user
+  has_many :review_comments, -> { order(created_at: :asc) }, dependent: :destroy
 
   default_scope { where(deleted_at: nil) }
   scope :with_deleted, -> { unscoped }
@@ -26,6 +30,8 @@ class Reading < ApplicationRecord
 
   def soft_delete
     activities.destroy_all
+    review_likes.destroy_all
+    review_comments.destroy_all
     update!(deleted_at: Time.current)
   end
 

@@ -23,6 +23,9 @@ class User < ApplicationRecord
   has_many :passive_follows, class_name: "Follow", foreign_key: :followed_id, inverse_of: :followed, dependent: :destroy
   has_many :followers, through: :passive_follows, source: :follower
   has_many :favorite_genres, dependent: :destroy
+  # ported from community_bookshelf app/models/user.rb (review_likes/review_comments associations)
+  has_many :review_likes, dependent: :destroy
+  has_many :review_comments, dependent: :destroy
   has_many :favorite_genre_tags, through: :favorite_genres, source: :tag
   has_one_attached :avatar
 

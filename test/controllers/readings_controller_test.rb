@@ -104,6 +104,39 @@ class ReadingsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to reading_url(Reading.last)
   end
 
+  test "owner can view their own reading regardless of review privacy" do
+    sign_in_as users(:member)
+    @reading.update!(is_review_public: false)
+
+    get reading_url(@reading)
+    assert_response :success
+  end
+
+  test "another member can view a public review" do
+    other = User.create!(email: "other@example.com", password: User::DEFAULT_PASSWORD)
+    sign_in_as other
+
+    get reading_url(@reading) # readings(:one) has a public review, owned by member
+    assert_response :success
+  end
+
+  test "another member cannot view a private review" do
+    @reading.update!(is_review_public: false)
+    other = User.create!(email: "other@example.com", password: User::DEFAULT_PASSWORD)
+    sign_in_as other
+
+    get reading_url(@reading)
+    assert_redirected_to root_url
+  end
+
+  test "moderator can view a private review" do
+    @reading.update!(is_review_public: false)
+    sign_in_as users(:moderator)
+
+    get reading_url(@reading)
+    assert_response :success
+  end
+
   test "member can start a re-read via JSON (re-read island)" do
     sign_in_as users(:member)
     @reading.update!(status: :finished)

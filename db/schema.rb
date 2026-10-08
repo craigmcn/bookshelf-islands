@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_05_155451) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_07_161628) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -127,6 +127,25 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_05_155451) do
     t.check_constraint "progress_percent IS NULL OR progress_percent >= 0 AND progress_percent <= 100", name: "readings_progress_percent_range"
   end
 
+  create_table "review_comments", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "reading_id", null: false
+    t.text "body", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["reading_id", "created_at"], name: "index_review_comments_on_reading_id_and_created_at"
+    t.index ["user_id"], name: "index_review_comments_on_user_id"
+  end
+
+  create_table "review_likes", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "reading_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["reading_id"], name: "index_review_likes_on_reading_id"
+    t.index ["user_id", "reading_id"], name: "index_review_likes_on_user_id_and_reading_id", unique: true
+  end
+
   create_table "role_assignments", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.bigint "role_id", null: false
@@ -221,6 +240,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_05_155451) do
   add_foreign_key "notifications", "users", column: "recipient_id"
   add_foreign_key "readings", "books"
   add_foreign_key "readings", "users"
+  add_foreign_key "review_comments", "readings"
+  add_foreign_key "review_comments", "users"
+  add_foreign_key "review_likes", "readings"
+  add_foreign_key "review_likes", "users"
   add_foreign_key "role_assignments", "roles"
   add_foreign_key "role_assignments", "users"
   add_foreign_key "shelf_books", "books"
