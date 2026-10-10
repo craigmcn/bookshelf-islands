@@ -1,8 +1,7 @@
 require "test_helper"
 
-# Follow/ReviewComment/BuddyRead already have real triggers, each tested in its
-# own file (e.g. "a new follow creates a notification"); ClubPost is still the
-# one notification_type with no trigger (lands in the final Social PR). These
+# Follow/ReviewComment/BuddyRead/ClubPost already have real triggers, each
+# tested in its own file (e.g. "a new follow creates a notification"). These
 # tests build Notification records directly rather than through a trigger —
 # the recipient themself stands in for `notifiable` below, since that's enough
 # to exercise the model's own behavior independent of any one trigger.
@@ -76,5 +75,15 @@ class NotificationTest < ActiveSupport::TestCase
     assert_equal "#{users(:member).display_name} invited you to a buddy read of #{books(:one).title}", notification.message
     assert_equal "buddy_read", notification.target_type
     assert_equal buddy_read.id, notification.target_id
+  end
+
+  test "message, target_type, and target_id for club_post" do
+    club = Club.create!(name: "Classics Club", book: books(:one), created_by: users(:moderator))
+    post = ClubPost.create!(club: club, user: users(:member), body: "Great book!")
+    notification = Notification.where(notification_type: "club_post", notifiable: post).last
+
+    assert_equal "#{users(:member).display_name} posted in #{club.name}", notification.message
+    assert_equal "club", notification.target_type
+    assert_equal club.id, notification.target_id
   end
 end
