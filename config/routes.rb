@@ -18,6 +18,11 @@ Rails.application.routes.draw do
     resource :membership, only: [:create, :destroy], controller: "club_memberships"
     resources :posts, only: [:create, :destroy], controller: "club_posts"
   end
+  resources :notifications, only: [:index, :update] do
+    collection do
+      patch :mark_all_read
+    end
+  end
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 
   get "up" => "rails/health#show", :as => :rails_health_check
