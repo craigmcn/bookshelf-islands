@@ -36,6 +36,17 @@ class NotificationsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to user_url(users(:member))
   end
 
+  test "update redirects to the buddy read for a buddy_read_invite notification" do
+    buddy_read = BuddyRead.create!(book: books(:one), initiator: users(:member), partner: users(:moderator))
+    notification = users(:moderator).notifications.last
+
+    sign_in_as users(:moderator)
+    patch notification_url(notification)
+
+    assert notification.reload.read?
+    assert_redirected_to buddy_read_url(buddy_read)
+  end
+
   test "a user cannot mark another user's notification read" do
     Follow.create!(follower: users(:member), followed: users(:moderator))
     notification = users(:moderator).notifications.last
