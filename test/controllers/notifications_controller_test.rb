@@ -36,11 +36,38 @@ class NotificationsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to user_url(users(:member))
   end
 
+  test "index renders with several notifications whose message reaches a nested notifiable association" do
+    ReviewComment.create!(user: users(:moderator), reading: readings(:one), body: "Nice review!")
+    ReviewComment.create!(user: users(:admin), reading: readings(:one), body: "Agreed!")
+
+    club = Club.create!(name: "Classics Club", book: books(:two), created_by: users(:admin))
+    club.club_memberships.create!(user: readings(:one).user)
+    ClubPost.create!(club: club, user: users(:admin), body: "Excited to start!")
+    ClubPost.create!(club: club, user: users(:admin), body: "Chapter 1 thoughts?")
+
+    sign_in_as readings(:one).user
+    get notifications_url
+
+    assert_response :success
+  end
+
   test "update redirects to the buddy read for a buddy_read_invite notification" do
     buddy_read = BuddyRead.create!(book: books(:one), initiator: users(:member), partner: users(:moderator))
     notification = users(:moderator).notifications.last
 
     sign_in_as users(:moderator)
+    patch notification_url(notification)
+
+    assert notification.reload.read?
+    assert_redirected_to buddy_read_url(buddy_read)
+  end
+
+  test "update redirects to the buddy read for a buddy_read_message notification" do
+    buddy_read = BuddyRead.create!(book: books(:one), initiator: users(:member), partner: users(:moderator))
+    message = BuddyReadMessage.create!(buddy_read: buddy_read, user: users(:moderator), body: "Hey!")
+    notification = users(:member).notifications.find_by!(notifiable: message)
+
+    sign_in_as users(:member)
     patch notification_url(notification)
 
     assert notification.reload.read?

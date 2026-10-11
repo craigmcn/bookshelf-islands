@@ -86,4 +86,31 @@ class NotificationTest < ActiveSupport::TestCase
     assert_equal "club", notification.target_type
     assert_equal club.id, notification.target_id
   end
+
+  test "message, target_type, and target_id for buddy_read_message" do
+    buddy_read = BuddyRead.create!(book: books(:one), initiator: users(:member), partner: users(:moderator))
+    message = BuddyReadMessage.create!(buddy_read: buddy_read, user: users(:member), body: "Chapter 3 was wild!")
+    notification = Notification.where(notification_type: "buddy_read_message", notifiable: message).last
+
+    assert_equal "#{users(:member).display_name} sent a message in your buddy read of #{books(:one).title}", notification.message
+    assert_equal "buddy_read", notification.target_type
+    assert_equal buddy_read.id, notification.target_id
+  end
+
+  test "preload_notifiable_details preloads nested associations per notifiable type without N+1" do
+    club = Club.create!(name: "Classics Club", book: books(:one), created_by: users(:moderator))
+    post = ClubPost.create!(club: club, user: users(:member), body: "Great book!")
+    club_post_notification = Notification.where(notification_type: "club_post", notifiable: post).last
+
+    buddy_read = BuddyRead.create!(book: books(:one), initiator: users(:member), partner: users(:moderator))
+    buddy_read_notification = Notification.where(notification_type: "buddy_read_invite", notifiable: buddy_read).last
+
+    notifications = Notification.preload_notifiable_details(
+      Notification.includes(:actor, :notifiable).where(id: [club_post_notification.id, buddy_read_notification.id])
+    )
+
+    assert_no_queries do
+      notifications.each(&:message)
+    end
+  end
 end
