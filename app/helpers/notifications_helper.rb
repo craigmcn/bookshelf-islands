@@ -1,6 +1,7 @@
-# ported from community_bookshelf app/helpers/notifications_helper.rb, plus a
-# buddy_read_invite branch in all three methods — that notification_type has
-# no equivalent in the reference (see Notification's own top comment).
+# ported from community_bookshelf app/helpers/notifications_helper.rb, plus
+# buddy_read_invite/buddy_read_message branches in all three methods — those
+# notification_types have no equivalent in the reference (see Notification's
+# own top comment).
 module NotificationsHelper
   def notification_path_for(notification)
     case notification.notification_type
@@ -8,6 +9,7 @@ module NotificationsHelper
     when "review_comment" then reading_path(notification.notifiable.reading)
     when "club_post" then club_path(notification.notifiable.club)
     when "buddy_read_invite" then buddy_read_path(notification.notifiable)
+    when "buddy_read_message" then buddy_read_path(notification.notifiable.buddy_read)
     end
   end
 
@@ -17,6 +19,7 @@ module NotificationsHelper
     when "review_comment" then reading_url(notification.notifiable.reading)
     when "club_post" then club_url(notification.notifiable.club)
     when "buddy_read_invite" then buddy_read_url(notification.notifiable)
+    when "buddy_read_message" then buddy_read_url(notification.notifiable.buddy_read)
     end
   end
 
@@ -26,6 +29,7 @@ module NotificationsHelper
     when "review_comment" then "fa-comment"
     when "club_post" then "fa-people-group"
     when "buddy_read_invite" then "fa-people-arrows"
+    when "buddy_read_message" then "fa-comments"
     end
   end
 end
