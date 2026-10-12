@@ -44,6 +44,7 @@ class ReadingChallengeTest < ActiveSupport::TestCase
   test "progress_percent is capped at 100" do
     member = users(:member)
     Reading.create!(user: member, book: books(:one), status: :finished, finished_on: Date.new(2026, 3, 1))
+    Reading.create!(user: member, book: books(:two), status: :finished, finished_on: Date.new(2026, 4, 1))
     challenge = ReadingChallenge.create!(user: member, year: 2026, goal: 1)
 
     assert_equal 100, challenge.progress_percent
