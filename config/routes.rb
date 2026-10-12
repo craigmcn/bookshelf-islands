@@ -23,6 +23,7 @@ Rails.application.routes.draw do
       patch :mark_all_read
     end
   end
+  resources :reading_challenges, only: [:index, :new, :create, :edit, :update]
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 
   get "up" => "rails/health#show", :as => :rails_health_check

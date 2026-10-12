@@ -12,6 +12,20 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "account edit page shows reading challenge progress, streak, and badges" do
+    member = users(:member)
+    Reading.create!(user: member, book: books(:two), status: :finished, finished_on: Date.current)
+    member.reading_challenges.create!(year: Date.current.year, goal: 1)
+
+    sign_in_as member
+    get edit_account_url
+
+    assert_response :success
+    assert_select "span.fs-4", text: member.current_streak.to_s
+    assert_match "book in a row", response.body
+    assert_match "Challenge Completed", response.body
+  end
+
   test "member can update their name and bio" do
     sign_in_as users(:member)
     patch account_url, params: {user: {name: "Sam Reader", bio: "I like fantasy novels."}}

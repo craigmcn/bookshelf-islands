@@ -27,6 +27,8 @@ class Reading < ApplicationRecord
   after_create :record_added_book_activity
   after_update :record_status_change_activity, if: :saved_change_to_status?
   after_update :record_review_activity, if: -> { review.present? && is_review_public? && review_before_last_save.blank? }
+  # ported from community_bookshelf app/models/reading.rb (award_badges callback)
+  after_save :award_badges, if: -> { saved_change_to_status? || saved_change_to_review? }
 
   def soft_delete
     activities.destroy_all
@@ -65,6 +67,10 @@ class Reading < ApplicationRecord
 
   def record_review_activity
     activities.create!(user: user, action: "reviewed")
+  end
+
+  def award_badges
+    user.award_badges!
   end
 
   def finished_on_not_before_started_on

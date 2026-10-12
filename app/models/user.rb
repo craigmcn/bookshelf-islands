@@ -7,6 +7,9 @@ class User < ApplicationRecord
   MAX_AVATAR_BYTES = 5.megabytes
   ALLOWED_AVATAR_TYPES = %w[image/png image/jpeg image/webp].freeze
   RESEND_COOLDOWN = 1.minute
+  # ported from community_bookshelf app/models/user.rb (STREAK_GAP_DAYS) — also
+  # referenced by Badge's streak-tier description strings.
+  STREAK_GAP_DAYS = 30
 
   class SoleAdminError < StandardError; end
 
@@ -35,6 +38,9 @@ class User < ApplicationRecord
   has_many :created_clubs, class_name: "Club", foreign_key: :created_by_id, inverse_of: :created_by
   has_many :club_posts, dependent: :destroy
   has_many :favorite_genre_tags, through: :favorite_genres, source: :tag
+  # ported from community_bookshelf app/models/user.rb (reading_challenges/user_badges associations)
+  has_many :reading_challenges, dependent: :destroy
+  has_many :user_badges, dependent: :destroy
   has_one_attached :avatar
 
   # Excludes the system placeholder account from user-facing listings (admin
@@ -97,6 +103,71 @@ class User < ApplicationRecord
   # ported from community_bookshelf app/models/user.rb (following?)
   def following?(other_user)
     active_follows.exists?(followed_id: other_user.id)
+  end
+
+  # ported from community_bookshelf app/models/user.rb (current_year_challenge)
+  def current_year_challenge
+    reading_challenges.find_by(year: Date.current.year)
+  end
+
+  # ported from community_bookshelf app/models/user.rb (current_streak) —
+  # consecutive finished books, most recent first, where each pair of
+  # finishes is no more than STREAK_GAP_DAYS apart. A most-recent finish
+  # older than that itself breaks the streak (nothing "current" to count).
+  # Purely computed on read every call — no stored column, no callback.
+  def current_streak
+    finish_dates = readings.finished.where.not(finished_on: nil).order(finished_on: :desc).pluck(:finished_on)
+    return 0 if finish_dates.empty?
+    return 0 if finish_dates.first < STREAK_GAP_DAYS.days.ago.to_date
+
+    streak = 1
+    finish_dates.each_cons(2) do |newer, older|
+      break unless (newer - older) <= STREAK_GAP_DAYS
+      streak += 1
+    end
+    streak
+  end
+
+  # ported from community_bookshelf app/models/user.rb (finished_readings_count/reviews_written_count)
+  def finished_readings_count
+    readings.finished.count
+  end
+
+  def reviews_written_count
+    readings.where.not(review: [nil, ""]).count
+  end
+
+  def badges
+    earned_keys = user_badges.pluck(:badge_key)
+    Badge.list.select { |definition| earned_keys.include?(definition.key) }
+  end
+
+  # ported from community_bookshelf app/models/user.rb (award_badges!) —
+  # checks every badge definition and records any newly-earned ones. Called
+  # from Reading's after_save callback (finishing a book, writing a review)
+  # and ReadingChallenge's after_save, rather than on a schedule — badges are
+  # permanent once earned, so this only ever needs to add rows, never remove
+  # them. Two concurrent saves can both pass the earned_keys check before
+  # either commits; the loser's create! is rescued as a no-op since the
+  # badge is awarded either way. requires_new: true opens a savepoint —
+  # award_badges! runs inside the caller's own save transaction, and a
+  # rescued RecordNotUnique without a savepoint would still leave that outer
+  # transaction aborted at the Postgres level, breaking every query run
+  # afterward in the same transaction (e.g. the next badge tier's check).
+  def award_badges!
+    earned_keys = user_badges.pluck(:badge_key)
+    Badge.list.each do |definition|
+      next if earned_keys.include?(definition.key)
+      next unless definition.criteria.call(self)
+
+      begin
+        ActiveRecord::Base.transaction(requires_new: true) do
+          user_badges.create!(badge_key: definition.key, awarded_at: Time.current)
+        end
+      rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid
+        next
+      end
+    end
   end
 
   def email_confirmed?
