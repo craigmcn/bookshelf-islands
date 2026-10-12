@@ -1,6 +1,4 @@
 # ported from community_bookshelf app/controllers/profiles_controller.rb
-# #show omits current_streak/badges/current_year_challenge — Gamification
-# roadmap category, not ported here yet.
 class ProfilesController < ApplicationController
   before_action :set_profile_user
 
@@ -10,6 +8,9 @@ class ProfilesController < ApplicationController
     @currently_reading_count = readings.reading.count
     @public_reviews = readings.where(is_review_public: true).where.not(review: [nil, ""])
       .includes(:book).order(updated_at: :desc).limit(5)
+    @current_streak = @profile_user.current_streak
+    @current_year_challenge = @profile_user.current_year_challenge
+    @badges = @profile_user.badges
   end
 
   def followers

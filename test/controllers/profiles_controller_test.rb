@@ -53,6 +53,19 @@ class ProfilesControllerTest < ActionDispatch::IntegrationTest
     assert_select "a", text: users(:moderator).display_name
   end
 
+  test "profile shows current streak, challenge progress, and earned badges" do
+    member = users(:member)
+    Reading.create!(user: member, book: books(:two), status: :finished, finished_on: Date.current)
+    member.reading_challenges.create!(year: Date.current.year, goal: 1)
+
+    sign_in_as users(:moderator)
+    get user_url(member)
+
+    assert_response :success
+    assert_match(/#{Date.current.year} Challenge/, response.body)
+    assert_match "Challenge Completed", response.body
+  end
+
   test "deleted placeholder account has no profile page" do
     placeholder = User.deleted_placeholder
     sign_in_as users(:member)
