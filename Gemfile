@@ -34,6 +34,12 @@ gem "faraday"
 # Pagination
 gem "pagy", "~> 43.7"
 
+# Month-bucketed queries for stats charts (User#books_finished_by_month etc.)
+gem "groupdate"
+# Server-rendered chart helpers (pie_chart/column_chart/line_chart), paired
+# with the chartkick/chart.js npm packages in package.json
+gem "chartkick"
+
 # Windows does not include zoneinfo files, so bundle the tzinfo-data gem
 gem "tzinfo-data", platforms: %i[windows jruby]
 

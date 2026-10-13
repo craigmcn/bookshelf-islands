@@ -142,6 +142,23 @@ class User < ApplicationRecord
     Badge.list.select { |definition| earned_keys.include?(definition.key) }
   end
 
+  # ported from community_bookshelf app/models/user.rb (genre_breakdown/books_finished_by_month/pages_read_by_month)
+  def genre_breakdown
+    Tag.genre.joins(books: :readings).merge(Reading.finished).where(readings: {user_id: id}).group(:name).count
+  end
+
+  # Books finished per calendar month over the last year, for the personal
+  # stats page's reading-pace chart.
+  def books_finished_by_month
+    readings.finished.where.not(finished_on: nil).group_by_month(:finished_on, last: 12).count
+  end
+
+  # Pages read per calendar month over the last year (summed from each
+  # finished book's page_count, which is optional and may be nil).
+  def pages_read_by_month
+    readings.finished.where.not(finished_on: nil).joins(:book).group_by_month(:finished_on, last: 12).sum("COALESCE(books.page_count, 0)")
+  end
+
   # ported from community_bookshelf app/models/user.rb (award_badges!) —
   # checks every badge definition and records any newly-earned ones. Called
   # from Reading's after_save callback (finishing a book, writing a review)

@@ -135,6 +135,14 @@ Three features ported together from one community_bookshelf commit, since `Badge
 - Bug fix beyond the reference, found via a test the reference itself lacks (no community_bookshelf test asserts `challenge_completed` is actually awarded): the `challenge_completed` criteria must call `user.reading_challenges.reload`, not a bare `user.reading_challenges` — when triggered from a *brand-new* `ReadingChallenge`'s own `after_save`, Rails doesn't append that record to the owner's cached association target until after the whole create (and its callbacks) finishes, so an unreloaded read inside that same callback never sees the very challenge that just completed. Filed as community_bookshelf#206 and fixed there too, since the reference has the identical ported code and bug.
 - No React island, no JSON API controller for `ReadingChallenge` — matches the reference (plain ERB/Bootstrap; bookshelf-islands has no JSON API namespace yet, a separate unstarted roadmap item).
 
+### Stats & insights (done)
+Both items (`[parity: solo]` in `doc/feature_roadmap.md` — net-new surface, not part of the shared Playwright e2e contract) are 100% live `ActiveRecord` queries; nothing is cached or persisted, no background job.
+- `User#genre_breakdown`/`#books_finished_by_month`/`#pages_read_by_month` back the personal `/stats` page (`StatsController`, no Pundit policy — same `current_user`-only exemption as `ActivitiesController`/`NotificationsController`). Month-bucketing uses the `groupdate` gem (`group_by_month`), not hand-rolled SQL date truncation. "Pace" is simply **books finished per calendar month**, not pages/day or any other measure.
+- Charts are rendered by the `chartkick` gem (paired with the `chartkick`/`chart.js` npm packages, wired into `app/javascript/application.js` as `window.Chartkick = Chartkick`) — a view calls `pie_chart`/`column_chart`/`line_chart` with a plain Ruby Hash, and chartkick's own bundled JS finds the generated chart divs and draws them with Chart.js on page load. No Stimulus controller, no React component — chartkick isn't app interaction logic, it's a rendering helper, so it doesn't fit the React-islands carve-out (closer in spirit to the `pagination-nav` Stimulus controller's plain-JS exemption than to `BookSearch`/`RatingPicker`).
+- `Admin::DashboardController` gained three `group_by_month` trend queries (new users, books added, readings logged), rendered as three more `line_chart`s under a "Trends" heading — still gated by the dashboard's own `before_action :require_admin` (stricter than the rest of `/admin`, which is moderator+).
+- Bug fix found and fixed along the way: `@total_users` on the admin dashboard was `User.count`, including the synthetic deleted-account placeholder — community_bookshelf's own `@total_users`/new-users trend both use `User.excluding_deleted_placeholder`, caught porting that controller's test verbatim (it asserts the placeholder is excluded) and fixed here to match.
+- Also added two navbar links ("Reading Challenges", "My Stats") that should have landed with the Gamification PR but were missed — `/reading_challenges` was reachable only via the account page's "Manage" button until now.
+
 ## Authentication & Authorization
 
 ### Clearance
@@ -188,8 +196,11 @@ resources :clubs         ClubsController              (any signed-in user; updat
   resource :membership   ClubMembershipsController#create/#destroy (path: clubs/:club_id/membership)
   resources :posts       ClubPostsController#create/#destroy (path: clubs/:club_id/posts)
 
+resources :reading_challenges  ReadingChallengesController (index/new/create/edit/update; owner only)
+resource :stats          StatsController#show         (signed-in users; own stats only)
+
 namespace :admin
-  /admin/dashboard       AdminDashboardController     (moderator+)
+  /admin/dashboard       Admin::DashboardController   (admin only)
   /admin/readings        AdminReadingsController      (moderator+)
   /admin/users           AdminUsersController         (admin only)
 ```

@@ -320,4 +320,27 @@ class UserTest < ActiveSupport::TestCase
 
     assert_equal ["books_finished_1"], member.badges.map(&:key)
   end
+
+  test "genre_breakdown counts finished books by genre tag name" do
+    member = users(:member)
+    Reading.create!(user: member, book: books(:one), status: :finished, finished_on: Date.current)
+
+    assert_equal({tags(:one).name => 1}, member.reload.genre_breakdown)
+  end
+
+  test "books_finished_by_month buckets finished readings by calendar month" do
+    member = users(:member)
+    Reading.create!(user: member, book: books(:one), status: :finished, finished_on: Date.current)
+
+    assert_equal 1, member.reload.books_finished_by_month.values.sum
+  end
+
+  test "pages_read_by_month sums page counts, treating a missing page count as zero" do
+    member = users(:member)
+    books(:one).update!(page_count: 300)
+    Reading.create!(user: member, book: books(:one), status: :finished, finished_on: Date.current)
+    Reading.create!(user: member, book: books(:two), status: :finished, finished_on: Date.current)
+
+    assert_equal 300, member.reload.pages_read_by_month.values.sum
+  end
 end
