@@ -238,6 +238,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@kurkle/color@npm:^0.3.0":
+  version: 0.3.4
+  resolution: "@kurkle/color@npm:0.3.4"
+  checksum: 10c0/0e9fd55c614b005c5f0c4c755bca19ec0293bc7513b4ea3ec1725234f9c2fa81afbc78156baf555c8b9cb0d305619253c3f5bca016067daeebb3d00ebb4ea683
+  languageName: node
+  linkType: hard
+
 "@nodelib/fs.scandir@npm:2.1.5":
   version: 2.1.5
   resolution: "@nodelib/fs.scandir@npm:2.1.5"
@@ -499,6 +506,8 @@ __metadata:
     "@types/react-dom": "npm:^19.2.3"
     autoprefixer: "npm:^10.5.0"
     bootstrap: "npm:^5.3.8"
+    chart.js: "npm:^4.5.1"
+    chartkick: "npm:^5.0.1"
     esbuild: "npm:^0.28.0"
     nodemon: "npm:^3.1.14"
     postcss: "npm:^8.5.15"
@@ -599,6 +608,43 @@ __metadata:
   languageName: node
   linkType: hard
 
+"chart.js@npm:4, chart.js@npm:^4.5.1":
+  version: 4.5.1
+  resolution: "chart.js@npm:4.5.1"
+  dependencies:
+    "@kurkle/color": "npm:^0.3.0"
+  checksum: 10c0/3f2a11dcaae9079e8e6b8ad077e2ae311f04996f9da14815730891e66215ee8b5f2c0eb70b5a156e5bde0f89a41bae13506dc6153e50fd22dcb282b21eec706f
+  languageName: node
+  linkType: hard
+
+"chartjs-adapter-date-fns@npm:>=3":
+  version: 3.0.0
+  resolution: "chartjs-adapter-date-fns@npm:3.0.0"
+  peerDependencies:
+    chart.js: ">=2.8.0"
+    date-fns: ">=2.0.0"
+  checksum: 10c0/bc785632da9e6253a969c84f5d382e39944246de8410285f060d6715b3ed681cee80142bb2c410329b4c21094efc6d54f9c289200463dce865f736a01a76de4b
+  languageName: node
+  linkType: hard
+
+"chartkick@npm:^5.0.1":
+  version: 5.0.1
+  resolution: "chartkick@npm:5.0.1"
+  dependencies:
+    chart.js: "npm:4"
+    chartjs-adapter-date-fns: "npm:>=3"
+    date-fns: "npm:>=2"
+  dependenciesMeta:
+    chart.js:
+      optional: true
+    chartjs-adapter-date-fns:
+      optional: true
+    date-fns:
+      optional: true
+  checksum: 10c0/7bd835b8c418e30870d52d7fd1e5623c08ddb16d9ab5fe055c693f2d88af633e92674bb308c4e572f2d05354faf8d59fe219256805233f84e12ba790fa331246
+  languageName: node
+  linkType: hard
+
 "chokidar@npm:^3.3.0, chokidar@npm:^3.5.2":
   version: 3.6.0
   resolution: "chokidar@npm:3.6.0"
@@ -681,6 +727,13 @@ __metadata:
   version: 3.2.3
   resolution: "csstype@npm:3.2.3"
   checksum: 10c0/cd29c51e70fa822f1cecd8641a1445bed7063697469d35633b516e60fe8c1bde04b08f6c5b6022136bb669b64c63d4173af54864510fbb4ee23281801841a3ce
+  languageName: node
+  linkType: hard
+
+"date-fns@npm:>=2":
+  version: 4.4.0
+  resolution: "date-fns@npm:4.4.0"
+  checksum: 10c0/988f0a13db183f5dfc85c36bbb6847a9c135a9225888bbea4005876ec15539a8613c21a07370a4e7ea543918d5a1cafb423c528b42cdbbde5fdfddb178126b21
   languageName: node
   linkType: hard
 
