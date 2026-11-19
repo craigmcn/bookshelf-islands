@@ -26,12 +26,12 @@ test.describe("Books", () => {
 
   test("anyone can browse the catalog by genre tag", async ({ page }) => {
     await page.goto("/books");
-    await page.getByRole("button", { name: "fantasy" }).click();
+    await page.getByRole("link", { name: "fantasy", exact: true }).click();
 
     await expect(page.getByRole("link", { name: "The Great Gatsby" })).toBeVisible();
     await expect(page.getByRole("link", { name: "1984" })).toHaveCount(0);
 
-    await page.getByRole("button", { name: "Clear tag filter" }).click();
+    await page.getByRole("link", { name: "Clear tag filter" }).click();
     await expect(page.getByRole("link", { name: "1984" })).toBeVisible();
   });
 
@@ -69,7 +69,7 @@ test.describe("Books", () => {
     await expect(page.getByRole("link", { name: "fast-paced" })).toBeVisible();
 
     await page.goto("/books");
-    await page.getByRole("button", { name: "cozy" }).click();
+    await page.getByRole("link", { name: "cozy", exact: true }).click();
     await expect(page.getByRole("link", { name: /Chamber of Secrets/ })).toBeVisible();
     await expect(page.getByRole("link", { name: "The Great Gatsby" })).toHaveCount(0);
   });
@@ -133,7 +133,7 @@ test.describe("Books", () => {
 
     const liveRegion = page.locator('[aria-live="polite"]');
     await page.getByLabel("Search for a Book").fill("hobbit");
-    await expect(liveRegion).toHaveText("1 result found.");
+    await expect(liveRegion).toHaveText("Showing 1 result.");
 
     await page.getByLabel("Search for a Book").fill("there is no such book");
     await expect(liveRegion).toHaveText("No results found.");

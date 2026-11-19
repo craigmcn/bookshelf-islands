@@ -40,7 +40,7 @@ interface CatalogBrowserProps {
 export default function CatalogBrowser({ initial, initialQuery }: CatalogBrowserProps) {
   const [query, setQuery] = useState(initialQuery)
   const [sort, setSort] = useState(initial.sort)
-  const [tag, setTag] = useState(initial.tag ?? "")
+  const tag = initial.tag ?? ""
   const [page, setPage] = useState(initial.pagy.page)
   const [data, setData] = useState<CatalogPage>(initial)
   const [loading, setLoading] = useState(false)
@@ -102,9 +102,14 @@ export default function CatalogBrowser({ initial, initialQuery }: CatalogBrowser
     setPage(1)
   }
 
-  const handleTagChange = (value: string) => {
-    setTag(value)
-    setPage(1)
+  // Tag filters are real links that navigate (community_bookshelf#224 #12), so the
+  // filtered view has a shareable URL; the island re-hydrates from these params.
+  const tagHref = (value: string) => {
+    const params = new URLSearchParams()
+    if (query.trim()) params.set("q", query.trim())
+    params.set("sort", sort)
+    if (value) params.set("tag", value)
+    return `/books?${params.toString()}`
   }
 
   return (
@@ -160,22 +165,22 @@ export default function CatalogBrowser({ initial, initialQuery }: CatalogBrowser
             <div key={label} className="d-flex flex-wrap align-items-center gap-1 mb-2">
               <span className="text-muted small me-1">Browse by {label.toLowerCase()}:</span>
               {tags.map((chipTag) => (
-                <button
+                <a
                   key={chipTag.name}
-                  type="button"
-                  className={`badge border-0 ${tag === chipTag.name ? "text-bg-primary" : "text-bg-secondary"}`}
-                  onClick={() => handleTagChange(tag === chipTag.name ? "" : chipTag.name)}
+                  href={tagHref(tag === chipTag.name ? "" : chipTag.name)}
+                  className={`badge text-decoration-none ${tag === chipTag.name ? "text-bg-primary" : "text-bg-secondary"}`}
+                  aria-current={tag === chipTag.name ? "true" : undefined}
                 >
                   {chipTag.name}
-                </button>
+                </a>
               ))}
             </div>
           )
       )}
       {tag && (
-        <button type="button" className="btn btn-link btn-sm p-0 mb-3" onClick={() => handleTagChange("")}>
+        <a href={tagHref("")} className="d-inline-block small mb-3">
           Clear tag filter
-        </button>
+        </a>
       )}
 
       {data.books.length === 0 ? (

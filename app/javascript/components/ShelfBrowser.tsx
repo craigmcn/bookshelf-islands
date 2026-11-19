@@ -35,7 +35,7 @@ export interface ShelfPage {
 const SORT_OPTIONS: Array<{ value: string; label: string }> = [
   { value: "recent", label: "Recently Updated" },
   { value: "title", label: "Book Title" },
-  { value: "rating", label: "Rating (High to Low)" },
+  { value: "rating", label: "Rating (high to low)" },
 ]
 
 const STATUS_OPTIONS: Array<{ value: string; label: string }> = [
@@ -73,7 +73,7 @@ export default function ShelfBrowser({
   const [query, setQuery] = useState(initialQuery)
   const [status, setStatus] = useState(initialStatus)
   const [rating, setRating] = useState(initialRating)
-  const [tag, setTag] = useState(initialTag)
+  const tag = initialTag
   const [sort, setSort] = useState(initial.sort)
   const [page, setPage] = useState(initial.pagy.page)
   const [data, setData] = useState<ShelfPage>(initial)
@@ -136,7 +136,17 @@ export default function ShelfBrowser({
   const handleQueryChange = resetToFirstPage(setQuery)
   const handleStatusChange = resetToFirstPage(setStatus)
   const handleRatingChange = resetToFirstPage(setRating)
-  const handleTagChange = resetToFirstPage(setTag)
+  // Tag filters are real links that navigate (community_bookshelf#224 #12), so the
+  // filtered view has a shareable URL; the island re-hydrates from these params.
+  const tagHref = (value: string) => {
+    const params = new URLSearchParams()
+    if (query.trim()) params.set("q", query.trim())
+    if (status) params.set("status", status)
+    if (rating) params.set("rating", rating)
+    params.set("sort", sort)
+    if (value) params.set("tag", value)
+    return `/readings?${params.toString()}`
+  }
   const handleSortChange = resetToFirstPage(setSort)
 
   const removeReading = (id: number) => {
@@ -229,26 +239,26 @@ export default function ShelfBrowser({
         <div className="d-flex flex-wrap align-items-center gap-1 mb-3">
           <span className="text-muted small me-1">Browse by genre:</span>
           {data.shelf_tags.map((shelfTag) => (
-            <button
+            <a
               key={shelfTag.name}
-              type="button"
-              className={`badge border-0 ${tag === shelfTag.name ? "text-bg-primary" : "text-bg-secondary"}`}
-              onClick={() => handleTagChange(tag === shelfTag.name ? "" : shelfTag.name)}
+              href={tagHref(tag === shelfTag.name ? "" : shelfTag.name)}
+              className={`badge text-decoration-none ${tag === shelfTag.name ? "text-bg-primary" : "text-bg-secondary"}`}
+              aria-current={tag === shelfTag.name ? "true" : undefined}
             >
               {shelfTag.name}
-            </button>
+            </a>
           ))}
           {tag && (
-            <button type="button" className="btn btn-link btn-sm p-0 ms-2" onClick={() => handleTagChange("")}>
+            <a href={tagHref("")} className="small ms-2">
               Clear tag filter
-            </button>
+            </a>
           )}
         </div>
       )}
 
       {data.readings.length === 0 ? (
         <div className="text-center text-muted py-5">
-          <p className="fs-5">No readings found.</p>
+          <p className="fs-5">No readings match those filters.</p>
         </div>
       ) : (
         <div className="table-responsive">
@@ -308,7 +318,8 @@ export default function ShelfBrowser({
                     )}
                     {reading.can_edit && (
                       <a href={reading.edit_path} className="btn btn-sm btn-outline-secondary">
-                        <i className="fasl fa-pen-to-square" />
+                        <i className="fasl fa-pen-to-square" aria-hidden="true" />
+                        <span className="visually-hidden">Edit reading</span>
                       </a>
                     )}
                     {reading.can_destroy && (

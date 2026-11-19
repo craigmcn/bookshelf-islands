@@ -25,8 +25,9 @@
           <%= render shelf_book.book %>
         <% end %>
         <%= button_to shelf_shelf_book_path(@shelf, shelf_book), method: :delete,
-              class: "btn btn-sm btn-outline-danger w-100 mt-1" do %>
-          <i class="fasl fa-xmark me-1"></i>Remove from list
+              class: "btn btn-sm btn-outline-danger w-100 mt-1",
+              form: { data: { turbo_confirm: "Remove \"#{shelf_book.book.title}\" from #{@shelf.name}?" } } do %>
+          <i class="fasl fa-xmark me-1" aria-hidden="true"></i>Remove <span class="visually-hidden"><%= shelf_book.book.title %> </span>from this list
         <% end %>
       </div>
     <% end %>

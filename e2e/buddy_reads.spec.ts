@@ -7,7 +7,7 @@ test.describe("Buddy reads", () => {
     await page.goto("/buddy_reads/new");
     await page.getByLabel("Book").selectOption({ label: "1984" });
     await page.getByLabel("Buddy").selectOption({ label: users.moderator.email });
-    await page.getByRole("button", { name: "Send Invitation" }).click();
+    await page.getByRole("button", { name: "Send Invite" }).click();
 
     await expect(page).toHaveURL(/\/buddy_reads\/\d+$/);
     await expect(page.getByText("Pending")).toBeVisible();

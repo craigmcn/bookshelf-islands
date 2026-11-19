@@ -13,13 +13,13 @@
       <div class="d-flex gap-2">
         <% if policy(@club).update? %>
           <%= link_to edit_club_path(@club), class: "btn btn-sm btn-outline-secondary" do %>
-            <i class="fasl fa-pen"></i>
+            <i class="fasl fa-pen" aria-hidden="true"></i><span class="visually-hidden">Edit club</span>
           <% end %>
         <% end %>
         <% if policy(@club).destroy? %>
           <%= button_to club_path(@club), method: :delete, class: "btn btn-sm btn-outline-danger",
                 form: { data: { turbo_confirm: "Delete this club? This cannot be undone." } } do %>
-            <i class="fasl fa-trash"></i>
+            <i class="fasl fa-trash" aria-hidden="true"></i><span class="visually-hidden">Delete club</span>
           <% end %>
         <% end %>
       </div>
@@ -57,7 +57,7 @@
           <% if policy(post).destroy? %>
             <%= button_to club_post_path(@club, post), method: :delete, class: "btn btn-sm btn-outline-danger",
                   form: { data: { turbo_confirm: "Remove this post?" } } do %>
-              <i class="fasl fa-trash"></i>
+              <i class="fasl fa-trash" aria-hidden="true"></i><span class="visually-hidden">Delete post</span>
             <% end %>
           <% end %>
         </div>

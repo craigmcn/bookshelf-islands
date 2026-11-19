@@ -19,11 +19,11 @@ test.describe("Readings", () => {
     await expect(page.getByRole("link", { name: "The Great Gatsby" })).toBeVisible();
 
     await page.getByLabel("Search").fill("nonexistent title");
-    await expect(page.getByText("No readings found.")).toBeVisible();
+    await expect(page.getByText("No readings match those filters.")).toBeVisible();
 
     await page.getByLabel("Search").fill("");
     await page.getByLabel("Status").selectOption("finished");
-    await expect(page.getByText("No readings found.")).toBeVisible();
+    await expect(page.getByText("No readings match those filters.")).toBeVisible();
 
     await page.getByLabel("Status").selectOption("");
     await expect(page.getByRole("link", { name: "The Great Gatsby" })).toBeVisible();
@@ -35,10 +35,10 @@ test.describe("Readings", () => {
     await expect(page.getByRole("link", { name: "The Great Gatsby" })).toBeVisible();
 
     // The Great Gatsby is tagged "fantasy" via the taggings fixture.
-    await page.getByRole("button", { name: "fantasy" }).click();
+    await page.getByRole("link", { name: "fantasy", exact: true }).click();
     await expect(page.getByRole("link", { name: "The Great Gatsby" })).toBeVisible();
 
-    await page.getByRole("button", { name: "Clear tag filter" }).click();
+    await page.getByRole("link", { name: "Clear tag filter" }).click();
     await expect(page.getByRole("link", { name: "The Great Gatsby" })).toBeVisible();
   });
 
