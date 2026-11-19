@@ -7,17 +7,23 @@ import { signIn, users } from "./auth";
 // proceeds with the real member-facing interaction under test.
 export async function lookUpUserId(browser: Browser, email: string): Promise<string> {
   const adminContext = await browser.newContext();
-  const adminPage = await adminContext.newPage();
-  await signIn(adminPage, users.admin);
-  await adminPage.goto("/admin/users");
+  try {
+    const adminPage = await adminContext.newPage();
+    await signIn(adminPage, users.admin);
+    await adminPage.goto("/admin/users");
 
-  const href = await adminPage
-    .getByRole("row", { name: new RegExp(email) })
-    .getByRole("link", { name: "Edit Roles" })
-    .getAttribute("href");
-  await adminContext.close();
+    // exact cell match, not a RegExp of the email — "." and "+" would otherwise
+    // be regex metacharacters and could match the wrong row
+    const href = await adminPage
+      .getByRole("row")
+      .filter({ has: adminPage.getByRole("cell", { name: email, exact: true }) })
+      .getByRole("link", { name: "Edit Roles" })
+      .getAttribute("href");
 
-  const match = /\/admin\/users\/(\d+)\/edit/.exec(href ?? "");
-  if (!match) throw new Error(`Could not find a user id for ${email}`);
-  return match[1];
+    const match = /\/admin\/users\/(\d+)\/edit/.exec(href ?? "");
+    if (!match) throw new Error(`Could not find a user id for ${email}`);
+    return match[1];
+  } finally {
+    await adminContext.close();
+  }
 }
