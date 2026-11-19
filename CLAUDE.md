@@ -84,7 +84,7 @@ Readings use `deleted_at` for soft deletes. Default scopes exclude deleted recor
 - `Book#tag_list` / `#mood_list` / `#pace_list` — comma-separated virtual attributes, one per category, backing the `TagInput` island on the book form
 - `Book#similar_books` — books sharing the most tags (any category), most-overlap first
 - `Book.recommended_for(user)` — books tagged like ones the user rated 4-5★ or finished, excluding already-shelved books (tag-overlap only, no ML/vector infra); shown as "Recommended for You" on My Shelf
-- Catalog and shelf browsing both support a single `?tag=` filter shared across all three categories (tag names are unique, so no category qualifier is needed)
+- Catalog and shelf browsing both support a single `?tag=` filter shared across all three categories (tag names are unique, so no category qualifier is needed). Tag chips in `CatalogBrowser`/`ShelfBrowser` are real `<a href>` links that navigate (community_bookshelf#224 #12), not in-place buttons — the island re-hydrates from the URL params
 
 ### Cataloging & Metadata
 - `isbn`, `page_count`, `published_on` are plain fields on the book form (like `format`/dates on `Reading`, no island needed); catalog sort gains a `published` option ordering by `published_on` desc
@@ -241,7 +241,7 @@ For page-level navigation, default to out-of-the-box Rails + Hotwire/Stimulus, w
 3. The React component owns all interaction state; it reports changes back via a callback prop (e.g. `onChange`, `onDeleted`), which the Stimulus controller uses to write hidden form fields or make a DOM change outside the React tree (e.g. fading the containing table row).
 4. The component talks to Rails via a JSON endpoint (e.g. `/book_search.json`, or an existing HTML endpoint that also responds to `format.json`) rather than Turbo Frames/Streams.
 
-Existing islands: `BookSearch` (search-and-select, syncs hidden fields), `RatingPicker` (star picker, syncs a hidden field), `DeleteReadingControl` (admin moderation table — confirm + fetch DELETE + optimistic row fade, no hidden fields involved).
+Existing islands: `BookSearch` (search-and-select, syncs hidden fields), `RatingPicker` (star picker, syncs a hidden field), `DeleteReadingControl` (inline Yes/Cancel confirm + fetch DELETE, no hidden fields involved — used by the admin moderation table, which fades the row, and by the `ShelfBrowser` shelf row as an icon-only "Remove reading" control via `iconLabel`, which drops the row and shows a "Reading was removed." alert). `ReadingPolicy#destroy?` is owner-or-moderator (community_bookshelf#238); there's no audit log here yet (#76), so CB's "audit only when deleting someone else's reading" rule has nothing to port into.
 
 ### Asset builds
 Changes to JS or CSS require `yarn build` / `yarn build:css` (or keep `bin/dev` running). Compiled output lands in `app/assets/builds/`.
@@ -270,6 +270,13 @@ Runs single-worker/serial (tests mutate a shared Postgres DB, unlike Minitest's
 per-test fixtures — there's no transaction rollback between Playwright tests). Tests
 that change fixture-owned state revert it before finishing (see the role-edit test in
 `e2e/admin.spec.ts`) so re-running the suite against the same DB stays idempotent.
+Multi-user scenarios get a second signed-in page from the `pageAs(user)` fixture
+(`e2e/support/fixtures.ts`, ported from community_bookshelf#236), which closes its
+contexts at teardown — import `test`/`expect` from there, not `browser.newContext()`.
+There's no `shelf_books` fixture here (community_bookshelf seeds The Great Gatsby on
+Favorites; aligning seeds/fixtures is #124), so list specs add the book themselves.
+Because e2e shares the test DB, a later `bin/rails test` can fail fixture loading with
+an `activities` FK violation from e2e-created rows — `bin/rails db:test:prepare` clears it.
 
 `config/database.yml`'s dev/test databases are named `bookshelf_islands_*` — separate
 from `community_bookshelf`'s own `community_bookshelf_*` databases on the same local
