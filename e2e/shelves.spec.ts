@@ -37,4 +37,24 @@ test.describe("Shelves (Lists)", () => {
     await page.getByRole("button", { name: "Favorites" }).click();
     await expect(page.getByRole("button", { name: "Favorites" }).locator(".fa-check")).toHaveCount(0);
   });
+
+  test("member can remove a book from the list's page", async ({ page }) => {
+    // Unlike community_bookshelf, no shelf_books fixture puts The Great Gatsby on Favorites
+    // (seed/fixture alignment is #124), so add it first; removing it restores the start state.
+    await signIn(page, users.member);
+    await page.goto("/books");
+    await page.getByRole("link", { name: "The Great Gatsby" }).click();
+    await page.getByRole("button", { name: "Save to a List" }).click();
+    await page.getByRole("button", { name: "Favorites" }).click();
+    await expect(page.getByRole("button", { name: "Favorites" }).locator(".fa-check")).toBeVisible();
+
+    await page.goto("/shelves");
+    await page.getByRole("link", { name: "Favorites" }).click();
+    await expect(page.getByRole("link", { name: "The Great Gatsby" })).toBeVisible();
+
+    page.once("dialog", (dialog) => dialog.accept());
+    await page.getByRole("button", { name: "Remove The Great Gatsby from this list" }).click();
+    await expect(page.getByRole("alert")).toContainText('Removed "The Great Gatsby" from Favorites.');
+    await expect(page.getByRole("link", { name: "The Great Gatsby" })).toHaveCount(0);
+  });
 });

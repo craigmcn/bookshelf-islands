@@ -24,6 +24,15 @@ class ShelvesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to shelf_url(Shelf.last)
   end
 
+  test "list page names each book's remove button and confirms first" do
+    shelf_book = ShelfBook.create!(shelf: @shelf, book: books(:one))
+    sign_in_as users(:member)
+    get shelf_url(@shelf)
+    assert_select "form[action=?][data-turbo-confirm]", shelf_shelf_book_path(@shelf, shelf_book) do
+      assert_select "button", text: /Remove\s+The Great Gatsby\s+from this list/
+    end
+  end
+
   test "member cannot view another user's list" do
     sign_in_as users(:admin)
     get shelf_url(@shelf)
