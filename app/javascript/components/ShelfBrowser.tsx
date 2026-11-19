@@ -78,6 +78,7 @@ export default function ShelfBrowser({
   const [page, setPage] = useState(initial.pagy.page)
   const [data, setData] = useState<ShelfPage>(initial)
   const [loading, setLoading] = useState(false)
+  const [notice, setNotice] = useState("")
   const isFirstRender = useRef(true)
 
   const fetchShelf = (signal?: AbortSignal) => {
@@ -150,6 +151,8 @@ export default function ShelfBrowser({
   const handleSortChange = resetToFirstPage(setSort)
 
   const removeReading = (id: number) => {
+    // same copy as the HTML destroy's flash, since the island deletes without a page load
+    setNotice("Reading was removed.")
     setData((current) => ({
       ...current,
       readings: current.readings.filter((reading) => reading.id !== id),
@@ -158,6 +161,13 @@ export default function ShelfBrowser({
 
   return (
     <div>
+      {notice && (
+        <div className="alert alert-success alert-dismissible" role="alert">
+          <i className="fasl fa-circle-check me-2" aria-hidden="true" />
+          {notice}
+          <button type="button" className="btn-close" aria-label="Close" onClick={() => setNotice("")} />
+        </div>
+      )}
       <div className="row g-2 mb-4">
         <div className="col-sm-6 col-md-4">
           <label className="visually-hidden" htmlFor="shelf_q">
@@ -324,7 +334,11 @@ export default function ShelfBrowser({
                     )}
                     {reading.can_destroy && (
                       <span className="ms-1">
-                        <DeleteReadingControl readingUrl={reading.path} onDeleted={() => removeReading(reading.id)} />
+                        <DeleteReadingControl
+                          readingUrl={reading.path}
+                          iconLabel="Remove reading"
+                          onDeleted={() => removeReading(reading.id)}
+                        />
                       </span>
                     )}
                   </td>

@@ -198,12 +198,40 @@ class ReadingsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 60, reading_json["progress_percent"]
   end
 
-  test "member cannot destroy a reading" do
+  # ported from community_bookshelf test/controllers/readings_controller_test.rb
+  test "member can soft-delete their own reading" do
     sign_in_as users(:member)
-    assert_no_difference "Reading.count" do
+    assert_no_difference "Reading.unscoped.count" do
       delete reading_url(@reading)
     end
-    assert_nil @reading.reload.deleted_at
+    assert_redirected_to readings_url
+    assert_not_nil @reading.reload.deleted_at
+  end
+
+  test "member can soft-delete their own reading via JSON (shelf island)" do
+    sign_in_as users(:member)
+    delete reading_url(@reading), as: :json
+    assert_response :no_content
+    assert_not_nil @reading.reload.deleted_at
+  end
+
+  test "member cannot destroy another member's reading" do
+    other = Reading.create!(user: users(:moderator), book: books(:two), status: :reading)
+    sign_in_as users(:member)
+    delete reading_url(other)
+    assert_redirected_to root_url
+    assert_nil other.reload.deleted_at
+  end
+
+  test "shelf offers its owner a remove control" do
+    sign_in_as users(:member)
+    get readings_url(format: :json)
+    reading_json = JSON.parse(response.body)["readings"].find { |r| r["id"] == @reading.id }
+    assert reading_json["can_destroy"]
+
+    # the <noscript> fallback row renders the same control as a plain form
+    get readings_url
+    assert_select "form[action=?] .visually-hidden", reading_path(@reading), text: "Remove reading"
   end
 
   test "moderator can soft-delete a reading" do

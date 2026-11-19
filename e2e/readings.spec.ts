@@ -120,6 +120,31 @@ test.describe("Readings", () => {
     await expect(rows.filter({ hasText: "Want to read" })).toHaveCount(1);
   });
 
+  test("member can remove a reading from their shelf", async ({ page }) => {
+    // logs its own Want-to-read reading to remove, so it runs alone and leaves no extra row
+    await signIn(page, users.member);
+    await page.goto("/readings");
+    const rows = page.locator("tr", { has: page.getByRole("link", { name: "1984" }) });
+    await expect(rows.first()).toBeVisible(); // wait for the shelf island to mount before counting
+    const before = await rows.count();
+
+    await page.goto("/readings/new");
+    await page.getByLabel("Book").selectOption({ label: "1984" });
+    await page.getByLabel("Status").selectOption("want_to_read");
+    await page.getByRole("button", { name: "Create Reading" }).click();
+    await expect(page).toHaveURL(/\/readings\/\d+$/);
+
+    await page.goto("/readings");
+    await expect(rows).toHaveCount(before + 1);
+    // the shelf island confirms inline (Yes/Cancel) rather than with a browser dialog
+    const row = rows.filter({ hasText: "Want to read" }).first();
+    await row.getByRole("button", { name: "Remove reading" }).click();
+    await row.getByRole("button", { name: "Yes" }).click();
+
+    await expect(page.getByRole("alert")).toContainText("Reading was removed.");
+    await expect(rows).toHaveCount(before);
+  });
+
   test("moderator soft-deleting a reading removes it from the owner's shelf", async ({ page, pageAs }) => {
     await signIn(page, users.moderator);
     await page.goto("/admin/readings");
