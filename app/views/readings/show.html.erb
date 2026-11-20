@@ -5,7 +5,7 @@
     <div class="d-flex align-items-center gap-2 mb-1">
       <h2 class="card-title mb-0"><%= @reading.book.title %></h2>
       <% if @reading.deleted? %>
-        <span class="badge bg-danger">deleted</span>
+        <span class="badge bg-danger">Deleted</span>
       <% end %>
     </div>
     <p class="text-muted"><%= @reading.book.author %></p>

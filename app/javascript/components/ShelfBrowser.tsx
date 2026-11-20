@@ -35,7 +35,7 @@ export interface ShelfPage {
 const SORT_OPTIONS: Array<{ value: string; label: string }> = [
   { value: "recent", label: "Recently Updated" },
   { value: "title", label: "Book Title" },
-  { value: "rating", label: "Rating (High to Low)" },
+  { value: "rating", label: "Rating (high to low)" },
 ]
 
 const STATUS_OPTIONS: Array<{ value: string; label: string }> = [
@@ -73,25 +73,40 @@ export default function ShelfBrowser({
   const [query, setQuery] = useState(initialQuery)
   const [status, setStatus] = useState(initialStatus)
   const [rating, setRating] = useState(initialRating)
-  const [tag, setTag] = useState(initialTag)
+  // the server's normalized tag when it recognised one, else the raw param, so an unknown
+  // ?tag= stays applied (and clearable) rather than silently dropping to an unfiltered shelf
+  const tag = initial.tag ?? initialTag
   const [sort, setSort] = useState(initial.sort)
   const [page, setPage] = useState(initial.pagy.page)
   const [data, setData] = useState<ShelfPage>(initial)
   const [loading, setLoading] = useState(false)
+  // keyed by a counter so a repeat "Reading was removed." remounts the alert and is re-announced
+  const [notice, setNotice] = useState<{ text: string; key: number } | null>(null)
   const isFirstRender = useRef(true)
+  // the in-flight fetch, aborted by the next one so a stale post-remove refetch can't win the race
+  const inFlight = useRef<AbortController | null>(null)
 
-  const fetchShelf = (signal?: AbortSignal) => {
-    setLoading(true)
+  // One builder for both the JSON fetch and the tag links, so the two can't drift apart.
+  const buildParams = (tagValue: string) => {
     const params = new URLSearchParams()
     if (query.trim()) params.set("q", query.trim())
     if (status) params.set("status", status)
     if (rating) params.set("rating", rating)
-    if (tag) params.set("tag", tag)
+    if (tagValue) params.set("tag", tagValue)
     params.set("sort", sort)
+    return params
+  }
+
+  const fetchShelf = () => {
+    inFlight.current?.abort()
+    const controller = new AbortController()
+    inFlight.current = controller
+    setLoading(true)
+    const params = buildParams(tag)
     params.set("page", String(page))
 
     return fetch(`/readings.json?${params.toString()}`, {
-      signal,
+      signal: controller.signal,
       headers: { Accept: "application/json" },
     })
       .then((response) => {
@@ -104,13 +119,15 @@ export default function ShelfBrowser({
           setData((current) => ({
             readings: [],
             sort,
-            tag: tag || null,
+            tag: current.tag,
             shelf_tags: current.shelf_tags,
             pagy: { page: 1, pages: 1, count: 0 },
           }))
         }
       })
-      .finally(() => setLoading(false))
+      .finally(() => {
+        if (inFlight.current === controller) setLoading(false)
+      })
   }
 
   useEffect(() => {
@@ -119,35 +136,55 @@ export default function ShelfBrowser({
       return
     }
 
-    const controller = new AbortController()
-    const timeout = setTimeout(() => fetchShelf(controller.signal), DEBOUNCE_MS)
+    const timeout = setTimeout(fetchShelf, DEBOUNCE_MS)
 
     return () => {
       clearTimeout(timeout)
-      controller.abort()
+      inFlight.current?.abort()
     }
-  }, [query, status, rating, tag, sort, page])
+  }, [query, status, rating, sort, page])
+
+  const goToPage = (value: number) => {
+    setNotice(null)
+    setPage(value)
+  }
 
   const resetToFirstPage = <T,>(setter: (value: T) => void) => (value: T) => {
     setter(value)
-    setPage(1)
+    goToPage(1)
   }
 
   const handleQueryChange = resetToFirstPage(setQuery)
   const handleStatusChange = resetToFirstPage(setStatus)
   const handleRatingChange = resetToFirstPage(setRating)
-  const handleTagChange = resetToFirstPage(setTag)
+  // Tag filters are real links that navigate (community_bookshelf#224 #12), so the
+  // filtered view has a shareable URL; the island re-hydrates from these params.
+  const tagHref = (value: string) => `/readings?${buildParams(value).toString()}`
+  const hasFilters = Boolean(query.trim() || status || rating || tag)
   const handleSortChange = resetToFirstPage(setSort)
 
   const removeReading = (id: number) => {
+    // same copy as the HTML destroy's flash, since the island deletes without a page load
+    setNotice((current) => ({ text: "Reading was removed.", key: (current?.key ?? 0) + 1 }))
+    const lastRowOnPage = data.readings.length === 1 && page > 1
     setData((current) => ({
       ...current,
       readings: current.readings.filter((reading) => reading.id !== id),
     }))
+    // refetch so pagination and the next page's rows catch up; step back if this page is now empty
+    if (lastRowOnPage) setPage(page - 1)
+    else fetchShelf()
   }
 
   return (
     <div>
+      {notice && (
+        <div key={notice.key} className="alert alert-success alert-dismissible" role="alert">
+          <i className="fasl fa-circle-check me-2" aria-hidden="true" />
+          {notice.text}
+          <button type="button" className="btn-close" aria-label="Close" onClick={() => setNotice(null)} />
+        </div>
+      )}
       <div className="row g-2 mb-4">
         <div className="col-sm-6 col-md-4">
           <label className="visually-hidden" htmlFor="shelf_q">
@@ -229,27 +266,35 @@ export default function ShelfBrowser({
         <div className="d-flex flex-wrap align-items-center gap-1 mb-3">
           <span className="text-muted small me-1">Browse by genre:</span>
           {data.shelf_tags.map((shelfTag) => (
-            <button
+            <a
               key={shelfTag.name}
-              type="button"
-              className={`badge border-0 ${tag === shelfTag.name ? "text-bg-primary" : "text-bg-secondary"}`}
-              onClick={() => handleTagChange(tag === shelfTag.name ? "" : shelfTag.name)}
+              href={tagHref(tag === shelfTag.name ? "" : shelfTag.name)}
+              className={`badge text-decoration-none ${tag === shelfTag.name ? "text-bg-primary" : "text-bg-secondary"}`}
+              aria-current={tag === shelfTag.name ? "true" : undefined}
             >
               {shelfTag.name}
-            </button>
+            </a>
           ))}
           {tag && (
-            <button type="button" className="btn btn-link btn-sm p-0 ms-2" onClick={() => handleTagChange("")}>
+            <a href={tagHref("")} className="small ms-2">
               Clear tag filter
-            </button>
+            </a>
           )}
         </div>
       )}
 
       {data.readings.length === 0 ? (
-        <div className="text-center text-muted py-5">
-          <p className="fs-5">No readings found.</p>
-        </div>
+        hasFilters ? (
+          <p className="text-muted">No readings match those filters.</p>
+        ) : (
+          <div className="text-center text-muted py-5">
+            <p className="fs-5">Your shelf is empty.</p>
+            <a href="/readings/new" className="btn btn-primary">
+              <i className="fasl fa-plus me-1" aria-hidden="true" />
+              Log your first reading
+            </a>
+          </div>
+        )
       ) : (
         <div className="table-responsive">
           <table className="table table-hover align-middle">
@@ -308,12 +353,17 @@ export default function ShelfBrowser({
                     )}
                     {reading.can_edit && (
                       <a href={reading.edit_path} className="btn btn-sm btn-outline-secondary">
-                        <i className="fasl fa-pen-to-square" />
+                        <i className="fasl fa-pen-to-square" aria-hidden="true" />
+                        <span className="visually-hidden">Edit reading</span>
                       </a>
                     )}
                     {reading.can_destroy && (
                       <span className="ms-1">
-                        <DeleteReadingControl readingUrl={reading.path} onDeleted={() => removeReading(reading.id)} />
+                        <DeleteReadingControl
+                          readingUrl={reading.path}
+                          iconLabel="Remove reading"
+                          onDeleted={() => removeReading(reading.id)}
+                        />
                       </span>
                     )}
                   </td>
@@ -330,7 +380,7 @@ export default function ShelfBrowser({
             type="button"
             className="btn btn-outline-secondary btn-sm"
             disabled={data.pagy.page <= 1}
-            onClick={() => setPage(data.pagy.page - 1)}
+            onClick={() => goToPage(data.pagy.page - 1)}
           >
             Previous
           </button>
@@ -341,7 +391,7 @@ export default function ShelfBrowser({
             type="button"
             className="btn btn-outline-secondary btn-sm"
             disabled={data.pagy.page >= data.pagy.pages}
-            onClick={() => setPage(data.pagy.page + 1)}
+            onClick={() => goToPage(data.pagy.page + 1)}
           >
             Next
           </button>

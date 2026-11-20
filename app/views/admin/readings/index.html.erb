@@ -26,7 +26,7 @@
             <td>
               <%= link_to reading.book.title, reading.book, class: "text-decoration-none fw-semibold" %>
               <% if reading.deleted? %>
-                <span class="badge bg-danger ms-1">deleted</span>
+                <span class="badge bg-danger ms-1">Deleted</span>
               <% end %>
             </td>
             <td><span class="badge bg-secondary"><%= reading.status.humanize %></span></td>

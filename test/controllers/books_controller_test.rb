@@ -245,4 +245,17 @@ class BooksControllerTest < ActionDispatch::IntegrationTest
     end
     assert_redirected_to books_url
   end
+
+  test "View on Shelf links to the newest of several readings of a book" do
+    sign_in_as users(:member)
+    reread = Reading.create!(user: users(:member), book: books(:one), status: :want_to_read)
+    get book_url(books(:one))
+    assert_select "a[href=?]", reading_path(reread), text: /View on Shelf/
+    assert_select "a[href=?]", new_reading_path(book_id: books(:one).id), text: /Log a Re-read/
+  end
+
+  test "catalog hands the island an unknown tag so it stays applied and clearable" do
+    get books_url(tag: "no-such-tag")
+    assert_select "[data-catalog-browser-tag-value=?]", "no-such-tag"
+  end
 end

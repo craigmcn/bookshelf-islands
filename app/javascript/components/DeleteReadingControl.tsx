@@ -3,11 +3,13 @@ import { useState } from "react"
 interface DeleteReadingControlProps {
   readingUrl: string
   onDeleted: () => void
+  // Set for an icon-only trigger (the shelf row); the admin table keeps its text "Delete" button.
+  iconLabel?: string
 }
 
 type Status = "idle" | "confirming" | "deleting" | "error"
 
-export default function DeleteReadingControl({ readingUrl, onDeleted }: DeleteReadingControlProps) {
+export default function DeleteReadingControl({ readingUrl, onDeleted, iconLabel }: DeleteReadingControlProps) {
   const [status, setStatus] = useState<Status>("idle")
 
   const confirmDelete = async () => {
@@ -66,7 +68,14 @@ export default function DeleteReadingControl({ readingUrl, onDeleted }: DeleteRe
 
   return (
     <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => setStatus("confirming")}>
-      Delete
+      {iconLabel ? (
+        <>
+          <i className="fasl fa-trash-can" aria-hidden="true" />
+          <span className="visually-hidden">{iconLabel}</span>
+        </>
+      ) : (
+        "Delete"
+      )}
     </button>
   )
 }

@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./support/fixtures";
 import { signIn, users } from "./support/auth";
 
 test.describe("Readings", () => {
@@ -19,11 +19,11 @@ test.describe("Readings", () => {
     await expect(page.getByRole("link", { name: "The Great Gatsby" })).toBeVisible();
 
     await page.getByLabel("Search").fill("nonexistent title");
-    await expect(page.getByText("No readings found.")).toBeVisible();
+    await expect(page.getByText("No readings match those filters.")).toBeVisible();
 
     await page.getByLabel("Search").fill("");
     await page.getByLabel("Status").selectOption("finished");
-    await expect(page.getByText("No readings found.")).toBeVisible();
+    await expect(page.getByText("No readings match those filters.")).toBeVisible();
 
     await page.getByLabel("Status").selectOption("");
     await expect(page.getByRole("link", { name: "The Great Gatsby" })).toBeVisible();
@@ -35,14 +35,14 @@ test.describe("Readings", () => {
     await expect(page.getByRole("link", { name: "The Great Gatsby" })).toBeVisible();
 
     // The Great Gatsby is tagged "fantasy" via the taggings fixture.
-    await page.getByRole("button", { name: "fantasy" }).click();
+    await page.getByRole("link", { name: "fantasy", exact: true }).click();
     await expect(page.getByRole("link", { name: "The Great Gatsby" })).toBeVisible();
 
-    await page.getByRole("button", { name: "Clear tag filter" }).click();
+    await page.getByRole("link", { name: "Clear tag filter" }).click();
     await expect(page.getByRole("link", { name: "The Great Gatsby" })).toBeVisible();
   });
 
-  test("member sees a Recommended for You section based on a highly-rated book's genre", async ({ page, browser }) => {
+  test("member sees a Recommended for You section based on a highly-rated book's genre", async ({ page, pageAs }) => {
     await signIn(page, users.moderator);
     await page.goto("/books/new");
     await page.getByLabel("Search for a Book").fill("chamber of secrets");
@@ -53,8 +53,7 @@ test.describe("Readings", () => {
 
     // fresh context instead of reusing the moderator's page, since navigating a signed-in
     // page to /sign_in just redirects it away rather than showing the form
-    const memberPage = await (await browser.newContext()).newPage();
-    await signIn(memberPage, users.member);
+    const memberPage = await pageAs(users.member);
     await memberPage.goto("/readings");
     await expect(memberPage.getByRole("heading", { name: "Recommended for You" })).toBeVisible();
     await expect(memberPage.getByRole("link", { name: /Chamber of Secrets/ })).toBeVisible();
@@ -121,7 +120,33 @@ test.describe("Readings", () => {
     await expect(rows.filter({ hasText: "Want to read" })).toHaveCount(1);
   });
 
-  test("moderator soft-deleting a reading removes it from the owner's shelf", async ({ page, browser }) => {
+  test("member can remove a reading from their shelf", async ({ page }) => {
+    // logs its own Want-to-read reading to remove, so it runs alone and leaves no extra row
+    await signIn(page, users.member);
+    await page.goto("/readings");
+    const rows = page.locator("tr", { has: page.getByRole("link", { name: "1984" }) });
+    await expect(rows.first()).toBeVisible(); // wait for the shelf island to mount before counting
+    const before = await rows.count();
+
+    await page.goto("/readings/new");
+    await page.getByLabel("Book").selectOption({ label: "1984" });
+    await page.getByLabel("Status").selectOption("want_to_read");
+    await page.getByRole("button", { name: "Create Reading" }).click();
+    await expect(page).toHaveURL(/\/readings\/\d+$/);
+    const readingPath = new URL(page.url()).pathname;
+
+    await page.goto("/readings");
+    await expect(rows).toHaveCount(before + 1);
+    // target the new reading by its own edit link, not row order; the island confirms inline (Yes/Cancel)
+    const row = page.locator("tr", { has: page.locator(`a[href="${readingPath}/edit"]`) });
+    await row.getByRole("button", { name: "Remove reading" }).click();
+    await row.getByRole("button", { name: "Yes" }).click();
+
+    await expect(page.getByRole("alert")).toContainText("Reading was removed.");
+    await expect(rows).toHaveCount(before);
+  });
+
+  test("moderator soft-deleting a reading removes it from the owner's shelf", async ({ page, pageAs }) => {
     await signIn(page, users.moderator);
     await page.goto("/admin/readings");
 
@@ -135,8 +160,7 @@ test.describe("Readings", () => {
     await expect(row.getByText("Deleted")).toBeVisible();
 
     // fresh context instead of UI sign-out, to avoid racing the moderator's sign-out redirect
-    const memberPage = await (await browser.newContext()).newPage();
-    await signIn(memberPage, users.member);
+    const memberPage = await pageAs(users.member);
     await memberPage.goto("/readings");
     await expect(memberPage.getByRole("link", { name: "The Great Gatsby" })).toHaveCount(0);
   });

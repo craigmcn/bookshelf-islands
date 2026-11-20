@@ -70,6 +70,9 @@
         <%= link_to @user_reading, class: "btn btn-success" do %>
           <i class="fasl fa-bookmark me-1"></i>View on Shelf
         <% end %>
+        <%= link_to new_reading_path(book_id: @book.id), class: "btn btn-outline-primary" do %>
+          <i class="fasl fa-rotate-right me-1"></i>Log a Re-read
+        <% end %>
       <% elsif current_user %>
         <%= link_to new_reading_path(book_id: @book.id), class: "btn btn-primary" do %>
           <i class="fasl fa-bookmark-plus me-1"></i>Add to Shelf

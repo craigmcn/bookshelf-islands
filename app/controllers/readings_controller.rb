@@ -5,7 +5,7 @@ class ReadingsController < ApplicationController
   SORT_OPTIONS = {
     "recent" => {label: "Recently Updated", order: {updated_at: :desc}},
     "title" => {label: "Book Title", order: {"books.title": :asc}},
-    "rating" => {label: "Rating (High to Low)", order: {rating: :desc}}
+    "rating" => {label: "Rating (high to low)", order: {rating: :desc}}
   }.freeze
 
   def index

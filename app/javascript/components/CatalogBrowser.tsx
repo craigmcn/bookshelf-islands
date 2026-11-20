@@ -35,16 +35,28 @@ const DEBOUNCE_MS = 300
 interface CatalogBrowserProps {
   initial: CatalogPage
   initialQuery: string
+  initialTag: string
 }
 
-export default function CatalogBrowser({ initial, initialQuery }: CatalogBrowserProps) {
+export default function CatalogBrowser({ initial, initialQuery, initialTag }: CatalogBrowserProps) {
   const [query, setQuery] = useState(initialQuery)
   const [sort, setSort] = useState(initial.sort)
-  const [tag, setTag] = useState(initial.tag ?? "")
+  // the server's normalized tag when it recognised one, else the raw param, so an unknown
+  // ?tag= stays applied (and clearable) rather than silently dropping to an unfiltered catalog
+  const tag = initial.tag ?? initialTag
   const [page, setPage] = useState(initial.pagy.page)
   const [data, setData] = useState<CatalogPage>(initial)
   const [loading, setLoading] = useState(false)
   const isFirstRender = useRef(true)
+
+  // One builder for both the JSON fetch and the tag links, so the two can't drift apart.
+  const buildParams = (tagValue: string) => {
+    const params = new URLSearchParams()
+    if (query.trim()) params.set("q", query.trim())
+    if (tagValue) params.set("tag", tagValue)
+    params.set("sort", sort)
+    return params
+  }
 
   useEffect(() => {
     if (isFirstRender.current) {
@@ -55,10 +67,7 @@ export default function CatalogBrowser({ initial, initialQuery }: CatalogBrowser
     const controller = new AbortController()
     const timeout = setTimeout(() => {
       setLoading(true)
-      const params = new URLSearchParams()
-      if (query.trim()) params.set("q", query.trim())
-      if (tag) params.set("tag", tag)
-      params.set("sort", sort)
+      const params = buildParams(tag)
       params.set("page", String(page))
 
       fetch(`/books.json?${params.toString()}`, {
@@ -75,7 +84,7 @@ export default function CatalogBrowser({ initial, initialQuery }: CatalogBrowser
             setData((current) => ({
               books: [],
               sort,
-              tag: tag || null,
+              tag: current.tag,
               genre_tags: current.genre_tags,
               mood_tags: current.mood_tags,
               pace_tags: current.pace_tags,
@@ -90,7 +99,7 @@ export default function CatalogBrowser({ initial, initialQuery }: CatalogBrowser
       clearTimeout(timeout)
       controller.abort()
     }
-  }, [query, sort, tag, page])
+  }, [query, sort, page])
 
   const handleQueryChange = (value: string) => {
     setQuery(value)
@@ -102,10 +111,9 @@ export default function CatalogBrowser({ initial, initialQuery }: CatalogBrowser
     setPage(1)
   }
 
-  const handleTagChange = (value: string) => {
-    setTag(value)
-    setPage(1)
-  }
+  // Tag filters are real links that navigate (community_bookshelf#224 #12), so the
+  // filtered view has a shareable URL; the island re-hydrates from these params.
+  const tagHref = (value: string) => `/books?${buildParams(value).toString()}`
 
   return (
     <div>
@@ -160,22 +168,22 @@ export default function CatalogBrowser({ initial, initialQuery }: CatalogBrowser
             <div key={label} className="d-flex flex-wrap align-items-center gap-1 mb-2">
               <span className="text-muted small me-1">Browse by {label.toLowerCase()}:</span>
               {tags.map((chipTag) => (
-                <button
+                <a
                   key={chipTag.name}
-                  type="button"
-                  className={`badge border-0 ${tag === chipTag.name ? "text-bg-primary" : "text-bg-secondary"}`}
-                  onClick={() => handleTagChange(tag === chipTag.name ? "" : chipTag.name)}
+                  href={tagHref(tag === chipTag.name ? "" : chipTag.name)}
+                  className={`badge text-decoration-none ${tag === chipTag.name ? "text-bg-primary" : "text-bg-secondary"}`}
+                  aria-current={tag === chipTag.name ? "true" : undefined}
                 >
                   {chipTag.name}
-                </button>
+                </a>
               ))}
             </div>
           )
       )}
       {tag && (
-        <button type="button" className="btn btn-link btn-sm p-0 mb-3" onClick={() => handleTagChange("")}>
+        <a href={tagHref("")} className="d-inline-block small mb-3">
           Clear tag filter
-        </button>
+        </a>
       )}
 
       {data.books.length === 0 ? (

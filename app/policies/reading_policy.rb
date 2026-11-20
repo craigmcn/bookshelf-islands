@@ -7,7 +7,8 @@ class ReadingPolicy < ApplicationPolicy
   def edit? = !record.deleted? && (record.user == user || user&.moderator_or_above?)
   def create? = user.present?
   def update? = !record.deleted? && (record.user == user || user&.moderator_or_above?)
-  def destroy? = !record.deleted? && user&.moderator_or_above?
+  # ported from community_bookshelf#238 — owners can remove their own readings, not just moderators
+  def destroy? = !record.deleted? && (record.user == user || user&.moderator_or_above?)
 
   class Scope < ApplicationPolicy::Scope
     def resolve

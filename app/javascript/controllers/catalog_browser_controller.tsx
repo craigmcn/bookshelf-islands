@@ -4,17 +4,18 @@ import CatalogBrowser, { type CatalogPage } from "../components/CatalogBrowser"
 
 export default class extends Controller<HTMLElement> {
   static targets = ["root"]
-  static values = { initial: Object, query: String }
+  static values = { initial: Object, query: String, tag: String }
 
   declare readonly rootTarget: HTMLElement
   declare readonly initialValue: CatalogPage
   declare readonly queryValue: string
+  declare readonly tagValue: string
 
   #reactRoot: Root | null = null
 
   connect() {
     this.#reactRoot = createRoot(this.rootTarget)
-    this.#reactRoot.render(<CatalogBrowser initial={this.initialValue} initialQuery={this.queryValue} />)
+    this.#reactRoot.render(<CatalogBrowser initial={this.initialValue} initialQuery={this.queryValue} initialTag={this.tagValue} />)
   }
 
   disconnect() {

@@ -96,7 +96,7 @@ export default function BookSearch({
   const liveMessage = loading || query.trim().length < 2
     ? ""
     : results.length > 0
-      ? `${results.length} result${results.length === 1 ? "" : "s"} found.`
+      ? `Showing ${results.length} result${results.length === 1 ? "" : "s"}.`
       : "No results found."
 
   if (selected) {
