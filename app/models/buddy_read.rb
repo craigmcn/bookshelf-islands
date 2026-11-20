@@ -1,7 +1,5 @@
-# ported from community_bookshelf app/models/buddy_read.rb, plus a
-# buddy_read_invite Notification on create — the reference implementation
-# doesn't send one, leaving an invite discoverable only by visiting the
-# index (see community_bookshelf#199, filed to bring it in line with this).
+# ported from community_bookshelf app/models/buddy_read.rb (including the
+# buddy_read_invite Notification, added here first and adopted there in community_bookshelf#199)
 class BuddyRead < ApplicationRecord
   belongs_to :book
   belongs_to :initiator, class_name: "User"

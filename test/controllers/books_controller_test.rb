@@ -149,6 +149,16 @@ class BooksControllerTest < ActionDispatch::IntegrationTest
     assert_equal 2, @book.series_position
   end
 
+  # ported from community_bookshelf test/controllers/books_controller_test.rb (community_bookshelf#184)
+  test "creating a book with a genre name in the moods field re-renders the form with an error" do
+    sign_in_as users(:member)
+    assert_no_difference "Book.count" do
+      post books_url, params: {book: {title: "Dune", author: "Frank Herbert", mood_list: tags(:one).name}}
+    end
+    assert_response :unprocessable_content
+    assert_includes @response.body, "Moods: &#39;#{tags(:one).name}&#39; is already a genre tag"
+  end
+
   test "member can create a book with mood and pace tags" do
     sign_in_as users(:member)
     post books_url, params: {book: {title: "New Book", author: "Some Author", added_by_id: users(:member).id, mood_list: "hopeful", pace_list: "slow-burn"}}
