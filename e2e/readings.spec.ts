@@ -133,11 +133,12 @@ test.describe("Readings", () => {
     await page.getByLabel("Status").selectOption("want_to_read");
     await page.getByRole("button", { name: "Create Reading" }).click();
     await expect(page).toHaveURL(/\/readings\/\d+$/);
+    const readingPath = new URL(page.url()).pathname;
 
     await page.goto("/readings");
     await expect(rows).toHaveCount(before + 1);
-    // the shelf island confirms inline (Yes/Cancel) rather than with a browser dialog
-    const row = rows.filter({ hasText: "Want to read" }).first();
+    // target the new reading by its own edit link, not row order; the island confirms inline (Yes/Cancel)
+    const row = page.locator("tr", { has: page.locator(`a[href="${readingPath}/edit"]`) });
     await row.getByRole("button", { name: "Remove reading" }).click();
     await row.getByRole("button", { name: "Yes" }).click();
 

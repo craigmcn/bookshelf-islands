@@ -83,6 +83,8 @@ export default function ShelfBrowser({
   // keyed by a counter so a repeat "Reading was removed." remounts the alert and is re-announced
   const [notice, setNotice] = useState<{ text: string; key: number } | null>(null)
   const isFirstRender = useRef(true)
+  // the in-flight fetch, aborted by the next one so a stale post-remove refetch can't win the race
+  const inFlight = useRef<AbortController | null>(null)
 
   // One builder for both the JSON fetch and the tag links, so the two can't drift apart.
   const buildParams = (tagValue: string) => {
@@ -95,13 +97,16 @@ export default function ShelfBrowser({
     return params
   }
 
-  const fetchShelf = (signal?: AbortSignal) => {
+  const fetchShelf = () => {
+    inFlight.current?.abort()
+    const controller = new AbortController()
+    inFlight.current = controller
     setLoading(true)
     const params = buildParams(tag)
     params.set("page", String(page))
 
     return fetch(`/readings.json?${params.toString()}`, {
-      signal,
+      signal: controller.signal,
       headers: { Accept: "application/json" },
     })
       .then((response) => {
@@ -120,7 +125,9 @@ export default function ShelfBrowser({
           }))
         }
       })
-      .finally(() => setLoading(false))
+      .finally(() => {
+        if (inFlight.current === controller) setLoading(false)
+      })
   }
 
   useEffect(() => {
@@ -129,12 +136,11 @@ export default function ShelfBrowser({
       return
     }
 
-    const controller = new AbortController()
-    const timeout = setTimeout(() => fetchShelf(controller.signal), DEBOUNCE_MS)
+    const timeout = setTimeout(fetchShelf, DEBOUNCE_MS)
 
     return () => {
       clearTimeout(timeout)
-      controller.abort()
+      inFlight.current?.abort()
     }
   }, [query, status, rating, sort, page])
 

@@ -35,12 +35,15 @@ const DEBOUNCE_MS = 300
 interface CatalogBrowserProps {
   initial: CatalogPage
   initialQuery: string
+  initialTag: string
 }
 
-export default function CatalogBrowser({ initial, initialQuery }: CatalogBrowserProps) {
+export default function CatalogBrowser({ initial, initialQuery, initialTag }: CatalogBrowserProps) {
   const [query, setQuery] = useState(initialQuery)
   const [sort, setSort] = useState(initial.sort)
-  const tag = initial.tag ?? ""
+  // the server's normalized tag when it recognised one, else the raw param, so an unknown
+  // ?tag= stays applied (and clearable) rather than silently dropping to an unfiltered catalog
+  const tag = initial.tag ?? initialTag
   const [page, setPage] = useState(initial.pagy.page)
   const [data, setData] = useState<CatalogPage>(initial)
   const [loading, setLoading] = useState(false)

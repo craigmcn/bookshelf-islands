@@ -253,4 +253,9 @@ class BooksControllerTest < ActionDispatch::IntegrationTest
     assert_select "a[href=?]", reading_path(reread), text: /View on Shelf/
     assert_select "a[href=?]", new_reading_path(book_id: books(:one).id), text: /Log a Re-read/
   end
+
+  test "catalog hands the island an unknown tag so it stays applied and clearable" do
+    get books_url(tag: "no-such-tag")
+    assert_select "[data-catalog-browser-tag-value=?]", "no-such-tag"
+  end
 end
