@@ -162,7 +162,8 @@ export default function ShelfBrowser({
 
     const rows = tbodyRef.current?.rows
     if (rows && rows.length > 0) {
-      const row = rows[Math.min(index, rows.length - 1)]
+      // clamp both ends: -1 (row already gone) falls back to the first row rather than throwing
+      const row = rows[Math.min(Math.max(index, 0), rows.length - 1)]
       const controls = row.cells[row.cells.length - 1].querySelectorAll<HTMLElement>("a, button")
       const target = controls[controls.length - 1] ?? row.querySelector<HTMLElement>("a")
       target?.focus()
@@ -194,11 +195,11 @@ export default function ShelfBrowser({
     // same copy as the HTML destroy's flash, since the island deletes without a page load
     setNotice((current) => ({ text: "Reading was removed.", key: (current?.key ?? 0) + 1 }))
     const lastRowOnPage = data.readings.length === 1 && page > 1
-    pendingFocusIndex.current = data.readings.findIndex((reading) => reading.id === id)
-    setData((current) => ({
-      ...current,
-      readings: current.readings.filter((reading) => reading.id !== id),
-    }))
+    setData((current) => {
+      // index from the latest rows, not the closure's, in case a refetch landed during the DELETE
+      pendingFocusIndex.current = current.readings.findIndex((reading) => reading.id === id)
+      return { ...current, readings: current.readings.filter((reading) => reading.id !== id) }
+    })
     // refetch so pagination and the next page's rows catch up; step back if this page is now empty
     if (lastRowOnPage) setPage(page - 1)
     else fetchShelf()

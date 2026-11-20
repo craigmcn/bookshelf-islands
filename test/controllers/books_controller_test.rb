@@ -41,6 +41,18 @@ class BooksControllerTest < ActionDispatch::IntegrationTest
     assert_equal [@book.title, books(:two).title], books.pluck("title")
   end
 
+  # ported from community_bookshelf test/controllers/books_controller_test.rb (community_bookshelf#218)
+  test "catalog json recently-added sort breaks timestamp ties newest-first" do
+    tied_at = 1.day.from_now
+    older = Book.create!(title: "Older", author: "A. Uthor", added_by: users(:member))
+    newer = Book.create!(title: "Newer", author: "A. Uthor", added_by: users(:member))
+    [older, newer].each { |book| book.update_column(:created_at, tied_at) }
+
+    get books_url(sort: "newest", format: :json)
+    ids = JSON.parse(response.body)["books"].pluck("id")
+    assert_equal [newer.id, older.id], ids.first(2)
+  end
+
   test "catalog json filters by tag" do
     @book.update!(tag_list: tags(:one).name)
 

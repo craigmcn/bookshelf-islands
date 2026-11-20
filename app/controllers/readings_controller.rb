@@ -1,12 +1,13 @@
 class ReadingsController < ApplicationController
   before_action :set_reading, only: %i[show edit update destroy]
 
-  # ported from community_bookshelf app/controllers/readings_controller.rb (SORT_OPTIONS + #index)
+  # ported from community_bookshelf app/controllers/readings_controller.rb (SORT_OPTIONS + #index, community_bookshelf#218)
+  # Each order ends with an id tiebreaker in its own direction, so tied rows can't shift between Pagy's pages.
   SORT_OPTIONS = {
-    "recent" => {label: "Recently Updated", order: {updated_at: :desc}},
-    "title" => {label: "Book Title", order: {"books.title": :asc}},
+    "recent" => {label: "Recently Updated", order: {updated_at: :desc, id: :desc}},
+    "title" => {label: "Book Title", order: {"books.title": :asc, id: :asc}},
     # rating is nullable ("No rating"); Postgres' DESC puts NULLs first, burying the rated readings.
-    "rating" => {label: "Rating (high to low)", order: Arel.sql("readings.rating DESC NULLS LAST")}
+    "rating" => {label: "Rating (high to low)", order: Arel.sql("readings.rating DESC NULLS LAST, readings.id DESC")}
   }.freeze
 
   def index
@@ -37,8 +38,7 @@ class ReadingsController < ApplicationController
     end
 
     @sort = SORT_OPTIONS.key?(params[:sort]) ? params[:sort] : "recent"
-    # Unique tiebreaker: tied rows (e.g. every unrated reading) can otherwise shift between Pagy's pages.
-    @readings = @readings.order(SORT_OPTIONS[@sort][:order]).order(id: :desc)
+    @readings = @readings.order(SORT_OPTIONS[@sort][:order])
 
     @shelf_tags = Tag.genre.joins(books: :readings).where(readings: {user: current_user}).distinct.order(:name)
 

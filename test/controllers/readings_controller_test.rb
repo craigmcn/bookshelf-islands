@@ -279,4 +279,16 @@ class ReadingsControllerTest < ActionDispatch::IntegrationTest
     ids = JSON.parse(response.body)["readings"].pluck("id")
     assert_operator ids.index(rated.id), :<, ids.index(unrated.id)
   end
+
+  # ported from community_bookshelf test/controllers/readings_controller_test.rb (community_bookshelf#218)
+  test "shelf json breaks sort ties by newest id, so paging is stable" do
+    # Both unrated, so the rating sort ties; without a tiebreaker Postgres returns them in insertion order.
+    older = Reading.create!(user: users(:member), book: books(:two), status: :want_to_read)
+    newer = Reading.create!(user: users(:member), book: books(:two), status: :want_to_read)
+
+    sign_in_as users(:member)
+    get readings_url(sort: "rating", format: :json)
+
+    assert_equal [readings(:one).id, newer.id, older.id], JSON.parse(response.body)["readings"].pluck("id")
+  end
 end
