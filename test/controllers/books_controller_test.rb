@@ -213,8 +213,9 @@ class BooksControllerTest < ActionDispatch::IntegrationTest
 
     get book_url(@book)
     assert_response :success
-    assert_match(/#{shelves(:one).name}/, response.body)
-    assert_match(/2026 TBR/, response.body)
+    shelves = JSON.parse(css_select("[data-shelf-picker-shelves-value]").first["data-shelf-picker-shelves-value"])
+    in_list = shelves.to_h { |shelf| [shelf["name"], shelf["shelf_book_id"].present?] }
+    assert_equal({shelves(:one).name => true, "2026 TBR" => false}, in_list)
   end
 
   # Auth wall

@@ -276,10 +276,11 @@ that change fixture-owned state revert it before finishing (see the role-edit te
 Multi-user scenarios get a second signed-in page from the `pageAs(user)` fixture
 (`e2e/support/fixtures.ts`, ported from community_bookshelf#236), which closes its
 contexts at teardown — import `test`/`expect` from there, not `browser.newContext()`.
-Fixtures match community_bookshelf's (The Great Gatsby starts on the member's Favorites
+The shelf fixtures match community_bookshelf's (The Great Gatsby starts on the member's Favorites
 via `shelf_books`), so list specs remove it and then put it back.
-Because e2e shares the test DB, a later `bin/rails test` can fail fixture loading with
-an `activities` FK violation from e2e-created rows — `bin/rails db:test:prepare` clears it.
+Because e2e and `bin/ci`'s seed step (a `db:seed:replant` against `RAILS_ENV=test`) share the
+test DB, a later `bin/rails test` can fail fixture loading with an FK violation from rows they
+left behind (e.g. `activities`) — `bin/rails db:test:prepare` clears it.
 
 `config/database.yml`'s dev/test databases are named `bookshelf_islands_*` — separate
 from `community_bookshelf`'s own `community_bookshelf_*` databases on the same local

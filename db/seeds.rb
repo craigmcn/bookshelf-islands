@@ -57,7 +57,7 @@ all_users = [admin_user, mod_user] + fake_members
 member_users = fake_members
 
 # A handful of moderators drawn from the regular membership, so admin actions
-# in the seed data (audit logs, role changes) have more than one mod to work with.
+# in the seed data (audit logs once #76 lands, role changes) have more than one mod to work with.
 extra_moderators = member_users.sample(4, random: seeded_rng("extra-moderators"))
 extra_moderators.each { |u| u.roles = [moderator_role, member_role] }
 
@@ -299,7 +299,7 @@ all_users.each do |user|
 end
 
 # A rare few soft-deleted readings, so the default scope and AuditLog's
-# destroy_reading action (below) have something real to reflect.
+# destroy_reading action (once #76 lands) have something real to reflect.
 soft_deleted_readings.each { |r| r.soft_delete unless r.deleted? }
 
 # ---------------------------------------------------------------------------
