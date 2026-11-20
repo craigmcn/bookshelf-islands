@@ -20,6 +20,7 @@ This started as a React-islands architecture demo — a Rails 8 + Hotwire/Stimul
 - **External API**: Open Library (book search + cover images via Faraday)
 - **Background jobs / Cache**: solid_queue, solid_cache (DB-backed)
 - **Testing**: Minitest + Capybara (system tests); Playwright for cross-app e2e parity checks (see below)
+- **N+1 detection**: `bullet` in development and test (`config/initializers/bullet.rb`, ported from community_bookshelf). It raises in test, so controller tests and the e2e suite (also `RAILS_ENV=test`) fail on an N+1 or unused eager load. Safelisted: `Series#books`, `Shelf#shelf_books` (low fixture counts), and `Notification#notifiable` (an all-follower page doesn't dereference it).
 - **CI**: GitHub Actions (Brakeman, bundler-audit, StandardRB, full test suite vs PostgreSQL, Playwright e2e)
 - **Deployment**: Docker + Kamal + Thruster
 
