@@ -155,4 +155,40 @@ class BookTest < ActiveSupport::TestCase
     assert_not ClubMembership.exists?(membership.id)
     assert_not ClubPost.exists?(post.id)
   end
+
+  # ported from community_bookshelf test/models/book_test.rb (community_bookshelf#184)
+  test "a name that's already another category's tag is rejected, not misfiled" do
+    book = books(:two)
+
+    assert_not book.update(mood_list: "dark, #{tags(:one).name}")
+
+    assert_includes book.errors[:base], "Moods: '#{tags(:one).name}' is already a genre tag"
+    assert_empty book.reload.tags.mood
+    assert_not Tag.exists?(name: "dark")
+  end
+
+  test "the same new name in two tag lists is rejected" do
+    book = books(:two)
+
+    assert_not book.update(tag_list: "gothic", mood_list: "gothic")
+
+    assert_includes book.errors[:base], "'gothic' can only be used in one of genres, moods, or pace"
+    assert_not Tag.exists?(name: "gothic")
+  end
+
+  test "an existing name typed into two lists is reported once" do
+    book = books(:two)
+
+    assert_not book.update(tag_list: tags(:one).name, mood_list: tags(:one).name)
+
+    assert_equal ["Moods: '#{tags(:one).name}' is already a genre tag"], book.errors[:base]
+  end
+
+  test "reusing a name within its own category is still allowed" do
+    book = books(:two)
+    book.update!(mood_list: "dark")
+
+    assert Book.create!(title: "Another", author: "A. Uthor", added_by: users(:member), mood_list: "dark").valid?
+    assert_equal 1, Tag.where(name: "dark").count
+  end
 end

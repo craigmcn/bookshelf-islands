@@ -6,11 +6,7 @@ class Book < ApplicationRecord
   has_many :tags, through: :taggings
   # ported from community_bookshelf app/models/book.rb (buddy_reads association)
   has_many :buddy_reads, dependent: :destroy
-  # Deliberate addition beyond the reference, not a port — community_bookshelf's
-  # own Book model has no clubs association at all, so destroying a book with
-  # a club there hits an uncaught ActiveRecord::InvalidForeignKey via
-  # clubs.book_id (BooksController#destroy uses destroy!). Closing that latent
-  # crash here rather than reproducing it.
+  # ported from community_bookshelf app/models/book.rb (clubs association, community_bookshelf#200)
   has_many :clubs, dependent: :destroy
 
   # Transient — carries the selected Open Library search result's work key from
@@ -23,6 +19,8 @@ class Book < ApplicationRecord
   validates :title, :author, presence: true
   # ported from community_bookshelf app/models/book.rb (page_count validation)
   validates :page_count, numericality: {only_integer: true, greater_than: 0}, allow_nil: true
+  # ported from community_bookshelf app/models/book.rb (tag_names_fit_their_category, community_bookshelf#184)
+  validate :tag_names_fit_their_category
 
   before_validation :clear_series_position_without_series
   after_save :sync_tag_list, if: -> { !@tag_list.nil? }
@@ -35,6 +33,8 @@ class Book < ApplicationRecord
   # assigned, so an update that omits it leaves that category's existing tags alone.
   # ported from community_bookshelf app/models/book.rb (tag_list/mood_list/pace_list + sync_*)
   attr_writer :tag_list, :mood_list, :pace_list
+
+  TAG_LIST_LABELS = {"genre" => "Genres / Tags", "mood" => "Moods", "pace" => "Pace"}.freeze
 
   def tag_list
     @tag_list || tags.genre.order(:name).pluck(:name).join(", ")
@@ -107,8 +107,26 @@ class Book < ApplicationRecord
     @tag_list = nil
   end
 
+  # Tag names are unique across categories, so a name that's already another
+  # category's tag, or typed into two lists at once, would be silently misfiled.
+  def tag_names_fit_their_category
+    submitted = {"genre" => @tag_list, "mood" => @mood_list, "pace" => @pace_list}.compact
+      .transform_values { |raw_list| Tag.parse_list(raw_list) }
+
+    reported = []
+    submitted.each do |category, names|
+      Tag.where(name: names).where.not(category: category).order(:name).each do |tag|
+        errors.add(:base, "#{TAG_LIST_LABELS[category]}: '#{tag.name}' is already a #{tag.category} tag")
+        reported << tag.name
+      end
+    end
+    submitted.values.flatten.tally.select { |name, count| count > 1 && reported.exclude?(name) }.each_key do |name|
+      errors.add(:base, "'#{name}' can only be used in one of genres, moods, or pace")
+    end
+  end
+
   def sync_tags_for_category(category, raw_list)
-    names = raw_list.to_s.split(",").filter_map { |name| name.strip.downcase.presence }.uniq
+    names = Tag.parse_list(raw_list)
     desired_ids = names.map { |name| find_or_create_tag(name, category).id }
     current_ids = tags.where(category: category).pluck(:id)
 
@@ -121,7 +139,9 @@ class Book < ApplicationRecord
   # find and race on the unique index; the rescue handles that without regressing
   # to create_or_find_by's behavior, which returns an invalid, unsaved record
   # (not the existing one) when Tag's own uniqueness validation — not a DB
-  # conflict — is what catches the duplicate.
+  # conflict — is what catches the duplicate. tag_names_fit_their_category has
+  # already rejected names owned by another category, so a cross-category reuse
+  # here only happens if such a tag is created concurrently.
   def find_or_create_tag(name, category)
     Tag.find_or_create_by(name: name) { |tag| tag.category = category }
   rescue ActiveRecord::RecordNotUnique

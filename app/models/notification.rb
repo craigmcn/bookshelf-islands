@@ -1,14 +1,4 @@
 # ported from community_bookshelf app/models/notification.rb
-# club_post isn't created by anything yet — Club/ClubPost lands in the final
-# PR as the Social roadmap category is ported. Declaring the enum value now
-# (rather than growing it piecemeal) matches the reference implementation
-# and avoids re-touching this model for that last PR; the case statements
-# below simply have an unreachable branch until that trigger exists.
-#
-# buddy_read_invite has no equivalent in community_bookshelf at all — it
-# never notifies on a buddy read invite, discoverable only by visiting the
-# index. Added here deliberately as a small improvement on the reference
-# (community_bookshelf#199 tracks bringing it back in line).
 class Notification < ApplicationRecord
   belongs_to :recipient, class_name: "User"
   belongs_to :actor, class_name: "User"

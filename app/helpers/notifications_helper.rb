@@ -1,7 +1,4 @@
-# ported from community_bookshelf app/helpers/notifications_helper.rb, plus
-# buddy_read_invite/buddy_read_message branches in all three methods — those
-# notification_types have no equivalent in the reference (see Notification's
-# own top comment).
+# ported from community_bookshelf app/helpers/notifications_helper.rb
 module NotificationsHelper
   def notification_path_for(notification)
     case notification.notification_type
