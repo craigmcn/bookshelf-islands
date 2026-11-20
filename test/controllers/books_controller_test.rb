@@ -208,14 +208,14 @@ class BooksControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "signed-in member sees their lists and which ones contain the book (shelf picker island)" do
-    sign_in_as users(:member)
-    ShelfBook.create!(shelf: shelves(:one), book: @book)
+    sign_in_as users(:member) # @book is already on shelves(:one) via the shelf_books fixture
     Shelf.create!(user: users(:member), name: "2026 TBR")
 
     get book_url(@book)
     assert_response :success
-    assert_match(/#{shelves(:one).name}/, response.body)
-    assert_match(/2026 TBR/, response.body)
+    shelves = JSON.parse(css_select("[data-shelf-picker-shelves-value]").first["data-shelf-picker-shelves-value"])
+    in_list = shelves.to_h { |shelf| [shelf["name"], shelf["shelf_book_id"].present?] }
+    assert_equal({shelves(:one).name => true, "2026 TBR" => false}, in_list)
   end
 
   # Auth wall

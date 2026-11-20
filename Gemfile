@@ -70,6 +70,11 @@ group :development, :test do
   gem "standard", ">= 1.35.1", require: false
   gem "standard-rails", require: false
 
+  # Generates realistic demo data for db/seeds.rb; CI replants seeds against
+  # RAILS_ENV=test (config/ci.rb), so this needs both envs, not just dev.
+  # (ported from community_bookshelf's Gemfile)
+  gem "faker"
+
   # Flags N+1 queries and unused eager loads; raises in test so CI catches them
   # (ported from community_bookshelf's Gemfile)
   gem "bullet"
