@@ -4,6 +4,9 @@ class Book < ApplicationRecord
   has_many :readings, dependent: :destroy
   has_many :taggings, dependent: :destroy
   has_many :tags, through: :taggings
+  # ported from community_bookshelf app/models/book.rb (shelf_books association)
+  has_many :shelf_books, dependent: :destroy
+  has_many :shelves, through: :shelf_books
   # ported from community_bookshelf app/models/book.rb (buddy_reads association)
   has_many :buddy_reads, dependent: :destroy
   # Deliberate addition beyond the reference, not a port — community_bookshelf's

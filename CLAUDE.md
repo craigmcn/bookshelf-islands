@@ -40,7 +40,7 @@ bin/rails test:system                   # Capybara system tests
 bin/rails routes                        # list all routes
 bin/rails db:migrate                    # run pending migrations
 bin/rails db:rollback                   # undo last migration
-bin/rails db:seed                       # seed roles + users
+bin/rails db:seed                       # demo data: same Faker-generated users/books/readings as community_bookshelf (minus audit logs until #76)
 
 bin/rubocop                             # lint (StandardRB via standard + standard-rails)
 bin/rubocop -a                          # auto-correct safe offenses
@@ -273,8 +273,8 @@ that change fixture-owned state revert it before finishing (see the role-edit te
 Multi-user scenarios get a second signed-in page from the `pageAs(user)` fixture
 (`e2e/support/fixtures.ts`, ported from community_bookshelf#236), which closes its
 contexts at teardown — import `test`/`expect` from there, not `browser.newContext()`.
-There's no `shelf_books` fixture here (community_bookshelf seeds The Great Gatsby on
-Favorites; aligning seeds/fixtures is #124), so list specs add the book themselves.
+Fixtures match community_bookshelf's (The Great Gatsby starts on the member's Favorites
+via `shelf_books`), so list specs remove it and then put it back.
 Because e2e shares the test DB, a later `bin/rails test` can fail fixture loading with
 an `activities` FK violation from e2e-created rows — `bin/rails db:test:prepare` clears it.
 

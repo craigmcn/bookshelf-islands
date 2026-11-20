@@ -27,27 +27,24 @@ test.describe("Shelves (Lists)", () => {
   });
 
   test("member can remove a book from a list", async ({ page }) => {
+    // The Great Gatsby starts on the member's Favorites list via the shelf_books fixture.
     await signIn(page, users.member);
     await page.goto("/books");
     await page.getByRole("link", { name: "The Great Gatsby" }).click();
     await page.getByRole("button", { name: "Save to a List" }).click();
-    await page.getByRole("button", { name: "Favorites" }).click();
     await expect(page.getByRole("button", { name: "Favorites" }).locator(".fa-check")).toBeVisible();
 
     await page.getByRole("button", { name: "Favorites" }).click();
     await expect(page.getByRole("button", { name: "Favorites" }).locator(".fa-check")).toHaveCount(0);
+
+    // put it back so the fixture list stays stable for other specs/runs
+    await page.getByRole("button", { name: "Favorites" }).click();
+    await expect(page.getByRole("button", { name: "Favorites" }).locator(".fa-check")).toBeVisible();
   });
 
   test("member can remove a book from the list's page", async ({ page }) => {
-    // Unlike community_bookshelf, no shelf_books fixture puts The Great Gatsby on Favorites
-    // (seed/fixture alignment is #124), so add it first; removing it restores the start state.
+    // The Great Gatsby starts on the member's Favorites list via the shelf_books fixture.
     await signIn(page, users.member);
-    await page.goto("/books");
-    await page.getByRole("link", { name: "The Great Gatsby" }).click();
-    await page.getByRole("button", { name: "Save to a List" }).click();
-    await page.getByRole("button", { name: "Favorites" }).click();
-    await expect(page.getByRole("button", { name: "Favorites" }).locator(".fa-check")).toBeVisible();
-
     await page.goto("/shelves");
     await page.getByRole("link", { name: "Favorites" }).click();
     await expect(page.getByRole("link", { name: "The Great Gatsby" })).toBeVisible();
@@ -56,5 +53,12 @@ test.describe("Shelves (Lists)", () => {
     await page.getByRole("button", { name: "Remove The Great Gatsby from this list" }).click();
     await expect(page.getByRole("alert")).toContainText('Removed "The Great Gatsby" from Favorites.');
     await expect(page.getByRole("link", { name: "The Great Gatsby" })).toHaveCount(0);
+
+    // put it back so the fixture list stays stable for other specs/runs
+    await page.goto("/books");
+    await page.getByRole("link", { name: "The Great Gatsby" }).click();
+    await page.getByRole("button", { name: "Save to a List" }).click();
+    await page.getByRole("button", { name: "Favorites" }).click();
+    await expect(page.getByRole("button", { name: "Favorites" }).locator(".fa-check")).toBeVisible();
   });
 });

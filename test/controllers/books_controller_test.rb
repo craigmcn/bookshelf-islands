@@ -186,8 +186,7 @@ class BooksControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "signed-in member sees their lists and which ones contain the book (shelf picker island)" do
-    sign_in_as users(:member)
-    ShelfBook.create!(shelf: shelves(:one), book: @book)
+    sign_in_as users(:member) # @book is already on shelves(:one) via the shelf_books fixture
     Shelf.create!(user: users(:member), name: "2026 TBR")
 
     get book_url(@book)

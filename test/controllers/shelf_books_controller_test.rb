@@ -3,7 +3,7 @@ require "test_helper"
 class ShelfBooksControllerTest < ActionDispatch::IntegrationTest
   setup do
     @shelf = shelves(:one)
-    @book = books(:one)
+    @book = books(:two) # not on shelves(:one); books(:one) is, via the shelf_books fixture
   end
 
   test "guest is redirected to sign in" do

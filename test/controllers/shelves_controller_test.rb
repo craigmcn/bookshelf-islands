@@ -25,7 +25,7 @@ class ShelvesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "list page names each book's remove button and confirms first" do
-    shelf_book = ShelfBook.create!(shelf: @shelf, book: books(:one))
+    shelf_book = shelf_books(:one)
     sign_in_as users(:member)
     get shelf_url(@shelf)
     assert_select "form[action=?][data-turbo-confirm]", shelf_shelf_book_path(@shelf, shelf_book) do

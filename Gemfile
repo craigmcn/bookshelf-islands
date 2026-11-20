@@ -69,6 +69,11 @@ group :development, :test do
   # StandardRB — opinionated Ruby style (https://github.com/standardrb/standard)
   gem "standard", ">= 1.35.1", require: false
   gem "standard-rails", require: false
+
+  # Generates realistic demo data for db/seeds.rb; CI replants seeds against
+  # RAILS_ENV=test (config/ci.rb), so this needs both envs, not just dev.
+  # (ported from community_bookshelf's Gemfile)
+  gem "faker"
 end
 
 group :development do

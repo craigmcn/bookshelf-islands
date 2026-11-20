@@ -1,18 +1,16 @@
 require "test_helper"
+# ported from community_bookshelf test/models/shelf_book_test.rb (relies on the shelf_books fixture)
 
 class ShelfBookTest < ActiveSupport::TestCase
   test "valid with a shelf and book" do
-    assert ShelfBook.new(shelf: shelves(:one), book: books(:one)).valid?
+    assert ShelfBook.new(shelf: shelves(:one), book: books(:two)).valid?
   end
 
-  test "invalid with a duplicate book on the same shelf" do
-    ShelfBook.create!(shelf: shelves(:one), book: books(:one))
+  test "invalid adding the same book to the same shelf twice" do
     assert_not ShelfBook.new(shelf: shelves(:one), book: books(:one)).valid?
   end
 
-  test "valid with the same book on a different shelf" do
-    ShelfBook.create!(shelf: shelves(:one), book: books(:one))
-    other_shelf = Shelf.create!(user: shelves(:one).user, name: "Another List")
-    assert ShelfBook.new(shelf: other_shelf, book: books(:one)).valid?
+  test "valid adding the same book to a different shelf" do
+    assert ShelfBook.new(shelf: shelves(:two), book: books(:one)).valid?
   end
 end
