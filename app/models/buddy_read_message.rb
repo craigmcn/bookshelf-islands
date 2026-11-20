@@ -1,7 +1,5 @@
-# ported from community_bookshelf app/models/buddy_read_message.rb, plus a
-# buddy_read_message Notification on create — the reference implementation
-# doesn't send one, leaving a new reply discoverable only by revisiting the
-# thread (see community_bookshelf#190, filed to bring it in line with this).
+# ported from community_bookshelf app/models/buddy_read_message.rb (including the
+# buddy_read_message Notification, added here first and adopted there in community_bookshelf#190)
 class BuddyReadMessage < ApplicationRecord
   belongs_to :buddy_read
   belongs_to :user

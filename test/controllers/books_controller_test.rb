@@ -41,6 +41,18 @@ class BooksControllerTest < ActionDispatch::IntegrationTest
     assert_equal [@book.title, books(:two).title], books.pluck("title")
   end
 
+  # ported from community_bookshelf test/controllers/books_controller_test.rb (community_bookshelf#218)
+  test "catalog json recently-added sort breaks timestamp ties newest-first" do
+    tied_at = 1.day.from_now
+    older = Book.create!(title: "Older", author: "A. Uthor", added_by: users(:member))
+    newer = Book.create!(title: "Newer", author: "A. Uthor", added_by: users(:member))
+    [older, newer].each { |book| book.update_column(:created_at, tied_at) }
+
+    get books_url(sort: "newest", format: :json)
+    ids = JSON.parse(response.body)["books"].pluck("id")
+    assert_equal [newer.id, older.id], ids.first(2)
+  end
+
   test "catalog json filters by tag" do
     @book.update!(tag_list: tags(:one).name)
 
@@ -147,6 +159,16 @@ class BooksControllerTest < ActionDispatch::IntegrationTest
     @book.reload
     assert_equal series(:one), @book.series
     assert_equal 2, @book.series_position
+  end
+
+  # ported from community_bookshelf test/controllers/books_controller_test.rb (community_bookshelf#184)
+  test "creating a book with a genre name in the moods field re-renders the form with an error" do
+    sign_in_as users(:member)
+    assert_no_difference "Book.count" do
+      post books_url, params: {book: {title: "Dune", author: "Frank Herbert", mood_list: tags(:one).name}}
+    end
+    assert_response :unprocessable_content
+    assert_includes @response.body, "Moods: &#39;#{tags(:one).name}&#39; is already a genre tag"
   end
 
   test "member can create a book with mood and pace tags" do

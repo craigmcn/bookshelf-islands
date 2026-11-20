@@ -55,6 +55,11 @@ const RATING_OPTIONS: Array<{ value: string; label: string }> = [
 
 const DEBOUNCE_MS = 300
 
+// The server ignores an unknown ?status=/?rating=, so the island must too, or a bogus
+// param would count as an active filter and hide the empty-shelf call to action.
+const knownOption = (options: Array<{ value: string }>, value: string) =>
+  options.some((option) => option.value === value) ? value : ""
+
 interface ShelfBrowserProps {
   initial: ShelfPage
   initialQuery: string
@@ -71,8 +76,8 @@ export default function ShelfBrowser({
   initialTag,
 }: ShelfBrowserProps) {
   const [query, setQuery] = useState(initialQuery)
-  const [status, setStatus] = useState(initialStatus)
-  const [rating, setRating] = useState(initialRating)
+  const [status, setStatus] = useState(knownOption(STATUS_OPTIONS, initialStatus))
+  const [rating, setRating] = useState(knownOption(RATING_OPTIONS, initialRating))
   // the server's normalized tag when it recognised one, else the raw param, so an unknown
   // ?tag= stays applied (and clearable) rather than silently dropping to an unfiltered shelf
   const tag = initial.tag ?? initialTag
@@ -85,6 +90,10 @@ export default function ShelfBrowser({
   const isFirstRender = useRef(true)
   // the in-flight fetch, aborted by the next one so a stale post-remove refetch can't win the race
   const inFlight = useRef<AbortController | null>(null)
+  // row index to refocus after a remove, so keyboard users don't drop to <body>
+  const pendingFocusIndex = useRef<number | null>(null)
+  const tbodyRef = useRef<HTMLTableSectionElement>(null)
+  const noticeRef = useRef<HTMLDivElement>(null)
 
   // One builder for both the JSON fetch and the tag links, so the two can't drift apart.
   const buildParams = (tagValue: string) => {
@@ -144,6 +153,25 @@ export default function ShelfBrowser({
     }
   }, [query, status, rating, sort, page])
 
+  // Focus the row that took the removed one's place (or the new last row); with no rows
+  // left, the "Reading was removed." alert. Runs once, so later refetches don't steal focus.
+  useEffect(() => {
+    const index = pendingFocusIndex.current
+    if (index === null) return
+    pendingFocusIndex.current = null
+
+    const rows = tbodyRef.current?.rows
+    if (rows && rows.length > 0) {
+      // clamp both ends: -1 (row already gone) falls back to the first row rather than throwing
+      const row = rows[Math.min(Math.max(index, 0), rows.length - 1)]
+      const controls = row.cells[row.cells.length - 1].querySelectorAll<HTMLElement>("a, button")
+      const target = controls[controls.length - 1] ?? row.querySelector<HTMLElement>("a")
+      target?.focus()
+    } else {
+      noticeRef.current?.focus()
+    }
+  }, [data])
+
   const goToPage = (value: number) => {
     setNotice(null)
     setPage(value)
@@ -167,10 +195,11 @@ export default function ShelfBrowser({
     // same copy as the HTML destroy's flash, since the island deletes without a page load
     setNotice((current) => ({ text: "Reading was removed.", key: (current?.key ?? 0) + 1 }))
     const lastRowOnPage = data.readings.length === 1 && page > 1
-    setData((current) => ({
-      ...current,
-      readings: current.readings.filter((reading) => reading.id !== id),
-    }))
+    setData((current) => {
+      // index from the latest rows, not the closure's, in case a refetch landed during the DELETE
+      pendingFocusIndex.current = current.readings.findIndex((reading) => reading.id === id)
+      return { ...current, readings: current.readings.filter((reading) => reading.id !== id) }
+    })
     // refetch so pagination and the next page's rows catch up; step back if this page is now empty
     if (lastRowOnPage) setPage(page - 1)
     else fetchShelf()
@@ -179,7 +208,13 @@ export default function ShelfBrowser({
   return (
     <div>
       {notice && (
-        <div key={notice.key} className="alert alert-success alert-dismissible" role="alert">
+        <div
+          key={notice.key}
+          ref={noticeRef}
+          tabIndex={-1}
+          className="alert alert-success alert-dismissible"
+          role="alert"
+        >
           <i className="fasl fa-circle-check me-2" aria-hidden="true" />
           {notice.text}
           <button type="button" className="btn-close" aria-label="Close" onClick={() => setNotice(null)} />
@@ -308,7 +343,7 @@ export default function ShelfBrowser({
                 <th></th>
               </tr>
             </thead>
-            <tbody>
+            <tbody ref={tbodyRef}>
               {data.readings.map((reading) => (
                 <tr key={reading.id}>
                   <td>
