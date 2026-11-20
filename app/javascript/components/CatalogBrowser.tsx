@@ -46,6 +46,15 @@ export default function CatalogBrowser({ initial, initialQuery }: CatalogBrowser
   const [loading, setLoading] = useState(false)
   const isFirstRender = useRef(true)
 
+  // One builder for both the JSON fetch and the tag links, so the two can't drift apart.
+  const buildParams = (tagValue: string) => {
+    const params = new URLSearchParams()
+    if (query.trim()) params.set("q", query.trim())
+    if (tagValue) params.set("tag", tagValue)
+    params.set("sort", sort)
+    return params
+  }
+
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false
@@ -55,10 +64,7 @@ export default function CatalogBrowser({ initial, initialQuery }: CatalogBrowser
     const controller = new AbortController()
     const timeout = setTimeout(() => {
       setLoading(true)
-      const params = new URLSearchParams()
-      if (query.trim()) params.set("q", query.trim())
-      if (tag) params.set("tag", tag)
-      params.set("sort", sort)
+      const params = buildParams(tag)
       params.set("page", String(page))
 
       fetch(`/books.json?${params.toString()}`, {
@@ -75,7 +81,7 @@ export default function CatalogBrowser({ initial, initialQuery }: CatalogBrowser
             setData((current) => ({
               books: [],
               sort,
-              tag: tag || null,
+              tag: current.tag,
               genre_tags: current.genre_tags,
               mood_tags: current.mood_tags,
               pace_tags: current.pace_tags,
@@ -90,7 +96,7 @@ export default function CatalogBrowser({ initial, initialQuery }: CatalogBrowser
       clearTimeout(timeout)
       controller.abort()
     }
-  }, [query, sort, tag, page])
+  }, [query, sort, page])
 
   const handleQueryChange = (value: string) => {
     setQuery(value)
@@ -104,13 +110,7 @@ export default function CatalogBrowser({ initial, initialQuery }: CatalogBrowser
 
   // Tag filters are real links that navigate (community_bookshelf#224 #12), so the
   // filtered view has a shareable URL; the island re-hydrates from these params.
-  const tagHref = (value: string) => {
-    const params = new URLSearchParams()
-    if (query.trim()) params.set("q", query.trim())
-    params.set("sort", sort)
-    if (value) params.set("tag", value)
-    return `/books?${params.toString()}`
-  }
+  const tagHref = (value: string) => `/books?${buildParams(value).toString()}`
 
   return (
     <div>

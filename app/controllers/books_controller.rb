@@ -43,7 +43,8 @@ class BooksController < ApplicationController
 
   def show
     authorize @book
-    @user_reading = current_user&.readings&.find_by(book: @book)
+    # newest first: "Log a Re-read" allows several readings of one book, and View on Shelf should open the latest
+    @user_reading = current_user&.readings&.where(book: @book)&.order(created_at: :desc)&.first
     @shelf_picker_json = shelf_picker_json
     @similar_books = @book.similar_books
   end

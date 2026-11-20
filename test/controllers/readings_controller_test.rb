@@ -251,4 +251,13 @@ class ReadingsControllerTest < ActionDispatch::IntegrationTest
     assert_response :no_content
     assert_not_nil @reading.reload.deleted_at
   end
+
+  test "noscript shelf distinguishes an empty shelf from a filter with no matches" do
+    sign_in_as users(:admin) # no readings of their own
+    get readings_url
+    assert_select "noscript", text: /Your shelf is empty\./
+
+    get readings_url(q: "nonexistent title")
+    assert_select "noscript", text: /No readings match those filters\./
+  end
 end

@@ -3,10 +3,8 @@ import { signIn } from "./auth";
 
 type User = { email: string; password: string };
 
-// ported from community_bookshelf e2e/support/fixtures.js
-// pageAs(user) opens a second signed-in browser context for multi-user scenarios.
-// Contexts are closed at teardown even when the test fails, since the suite runs
-// serially in one worker and leaked contexts would pile up until the browser exits.
+// ported from community_bookshelf e2e/support/fixtures.js — closes every context at teardown,
+// even on failure, since the serial single-worker suite would otherwise pile them up.
 export const test = base.extend<{ pageAs: (user: User) => Promise<Page> }>({
   pageAs: async ({ browser }, use) => {
     const contexts: BrowserContext[] = [];
