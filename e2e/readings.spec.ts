@@ -144,6 +144,8 @@ test.describe("Readings", () => {
 
     await expect(page.getByRole("alert")).toContainText("Reading was removed.");
     await expect(rows).toHaveCount(before);
+    // islands-only check (#140): focus moves to a neighbouring row's control, not <body>
+    await expect(page.locator(":focus")).toHaveAccessibleName("Remove reading");
   });
 
   test("moderator soft-deleting a reading removes it from the owner's shelf", async ({ page, pageAs }) => {

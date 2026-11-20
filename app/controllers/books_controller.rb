@@ -30,7 +30,8 @@ class BooksController < ApplicationController
     end
 
     @sort = SORT_OPTIONS.key?(params[:sort]) ? params[:sort] : "title"
-    @books = @books.order(SORT_OPTIONS[@sort][:order])
+    # Unique tiebreaker: tied rows (e.g. undated books) can otherwise shift between Pagy's pages.
+    @books = @books.order(SORT_OPTIONS[@sort][:order]).order(:id)
 
     @pagy, @books = pagy(@books, limit: 12)
     @catalog_json = catalog_page_json
