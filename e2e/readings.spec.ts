@@ -137,6 +137,11 @@ test.describe("Readings", () => {
 
     await page.goto("/readings");
     await expect(rows).toHaveCount(before + 1);
+    const shelfRows = page.locator("tbody tr");
+    const removedIndex = await shelfRows.evaluateAll(
+      (trs, href) => trs.findIndex((tr) => tr.querySelector(`a[href="${href}"]`)),
+      `${readingPath}/edit`,
+    );
     // target the new reading by its own edit link, not row order; the island confirms inline (Yes/Cancel)
     const row = page.locator("tr", { has: page.locator(`a[href="${readingPath}/edit"]`) });
     await row.getByRole("button", { name: "Remove reading" }).click();
@@ -144,6 +149,9 @@ test.describe("Readings", () => {
 
     await expect(page.getByRole("alert")).toContainText("Reading was removed.");
     await expect(rows).toHaveCount(before);
+    // islands-only check (#140): focus moves to the row that took the removed one's place, not <body>
+    const nextRow = shelfRows.nth(Math.min(removedIndex, (await shelfRows.count()) - 1));
+    await expect(nextRow.getByRole("button", { name: "Remove reading" })).toBeFocused();
   });
 
   test("moderator soft-deleting a reading removes it from the owner's shelf", async ({ page, pageAs }) => {

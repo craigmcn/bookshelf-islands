@@ -260,4 +260,35 @@ class ReadingsControllerTest < ActionDispatch::IntegrationTest
     get readings_url(q: "nonexistent title")
     assert_select "noscript", text: /No readings match those filters\./
   end
+
+  test "noscript shelf shows the empty-shelf state when only invalid filters are given" do
+    sign_in_as users(:admin) # no readings of their own
+    get readings_url(status: "bogus", rating: "bogus")
+    assert_select "noscript", text: /Your shelf is empty\./
+    assert_select "noscript", text: /No readings match those filters\./, count: 0
+  end
+
+  # ported from community_bookshelf test/controllers/readings_controller_test.rb (community_bookshelf#218)
+  test "shelf json rating sort puts rated readings before unrated ones" do
+    unrated = Reading.create!(user: users(:member), book: books(:two), status: :want_to_read)
+    rated = readings(:one) # rated
+
+    sign_in_as users(:member)
+    get readings_url(sort: "rating", format: :json)
+
+    ids = JSON.parse(response.body)["readings"].pluck("id")
+    assert_operator ids.index(rated.id), :<, ids.index(unrated.id)
+  end
+
+  # ported from community_bookshelf test/controllers/readings_controller_test.rb (community_bookshelf#218)
+  test "shelf json breaks sort ties by newest id, so paging is stable" do
+    # Both unrated, so the rating sort ties; without a tiebreaker Postgres returns them in insertion order.
+    older = Reading.create!(user: users(:member), book: books(:two), status: :want_to_read)
+    newer = Reading.create!(user: users(:member), book: books(:two), status: :want_to_read)
+
+    sign_in_as users(:member)
+    get readings_url(sort: "rating", format: :json)
+
+    assert_equal [readings(:one).id, newer.id, older.id], JSON.parse(response.body)["readings"].pluck("id")
+  end
 end

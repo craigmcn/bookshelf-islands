@@ -83,7 +83,7 @@
       </table>
     </div>
     <%== @pagy.series_nav("bootstrap") if @pagy.pages > 1 %>
-  <% elsif params[:q].present? || params[:status].present? || params[:rating].present? || params[:tag].present? %>
+  <% elsif @filters_applied %>
     <p class="text-muted">No readings match those filters.</p>
   <% else %>
     <div class="text-center text-muted py-5">
