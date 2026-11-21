@@ -27,7 +27,7 @@ class ReadingsControllerTest < ActionDispatch::IntegrationTest
     assert_equal ["1984"], readings.pluck("book_title")
   end
 
-  # ported from community_bookshelf test/controllers/readings_controller_test.rb (community_bookshelf#242)
+  # adapted from community_bookshelf test/controllers/readings_controller_test.rb (community_bookshelf#242)
   test "shelf treats an array or hash search param as no search" do
     sign_in_as users(:member)
     get readings_url(q: ["nothing-matches-this"], format: :json)
@@ -40,7 +40,32 @@ class ReadingsControllerTest < ActionDispatch::IntegrationTest
     get readings_url(q: ["nothing-matches-this"])
     assert_response :success
     assert_select "[data-shelf-browser-query-value=?]", ""
+  end
+
+  test "noscript shelf treats an array search param as no filter" do
+    sign_in_as users(:admin) # no readings of their own
+    get readings_url(q: ["nothing-matches-this"])
+    assert_select "noscript", text: /Your shelf is empty\./
     assert_select "noscript", text: /No readings match those filters\./, count: 0
+  end
+
+  test "shelf renders, unfiltered, when status, rating or sort is a hash" do
+    sign_in_as users(:member)
+    [{status: {k: "x"}}, {rating: {k: "x"}}, {sort: {k: "x"}}].each do |params|
+      get readings_url(params) # tag chips render with the fixtures, so every link helper runs
+      assert_response :success
+      assert_select "a[href*=?]", "/readings?", minimum: 1
+    end
+    assert_select "[data-shelf-browser-status-value=?]", ""
+    assert_select "[data-shelf-browser-rating-value=?]", ""
+  end
+
+  test "shelf echoes only a valid status and rating" do
+    sign_in_as users(:member)
+    get readings_url(status: ["finished"], rating: "four")
+    assert_select "[data-shelf-browser-status-value=?]", ""
+    assert_select "[data-shelf-browser-rating-value=?]", "four"
+    assert_select "select[name=rating] option[selected][value=?]", "four"
   end
 
   test "shelf json filters by status" do
