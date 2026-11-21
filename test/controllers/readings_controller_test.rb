@@ -27,6 +27,22 @@ class ReadingsControllerTest < ActionDispatch::IntegrationTest
     assert_equal ["1984"], readings.pluck("book_title")
   end
 
+  # ported from community_bookshelf test/controllers/readings_controller_test.rb (community_bookshelf#242)
+  test "shelf treats an array or hash search param as no search" do
+    sign_in_as users(:member)
+    get readings_url(q: ["nothing-matches-this"], format: :json)
+    assert_response :success
+    assert_equal [@reading.id], JSON.parse(response.body)["readings"].pluck("id")
+
+    get readings_url(q: {k: "nothing-matches-this"}, format: :json)
+    assert_equal [@reading.id], JSON.parse(response.body)["readings"].pluck("id")
+
+    get readings_url(q: ["nothing-matches-this"])
+    assert_response :success
+    assert_select "[data-shelf-browser-query-value=?]", ""
+    assert_select "noscript", text: /No readings match those filters\./, count: 0
+  end
+
   test "shelf json filters by status" do
     sign_in_as users(:member)
     Reading.create!(user: users(:member), book: books(:two), status: :finished)

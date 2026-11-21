@@ -27,6 +27,22 @@ class BooksControllerTest < ActionDispatch::IntegrationTest
     assert_equal ["F. Scott Fitzgerald", "George Orwell"], books.pluck("author")
   end
 
+  # ported from community_bookshelf test/controllers/books_controller_test.rb (community_bookshelf#242)
+  test "catalog treats an array or hash search param as no search" do
+    get books_url(q: ["gatsby"], format: :json)
+    assert_response :success
+    assert_equal Book.count, JSON.parse(response.body)["books"].size # unfiltered, not a search for '["gatsby"]'
+
+    get books_url(q: {k: "gatsby"}, format: :json)
+    assert_response :success
+    assert_equal Book.count, JSON.parse(response.body)["books"].size
+
+    get books_url(q: ["gatsby"])
+    assert_response :success
+    assert_select "[data-catalog-browser-query-value=?]", ""
+    assert_select "input[name=q][value]", count: 0
+  end
+
   test "catalog json falls back to title sort for an unknown sort key" do
     get books_url(sort: "bogus", format: :json)
     assert_response :success

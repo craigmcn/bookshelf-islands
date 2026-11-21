@@ -30,7 +30,7 @@
     <% end %>
     <div class="col-sm-6 col-md-4">
       <%= form.label :q, "Search", class: "visually-hidden" %>
-      <%= form.text_field :q, value: params[:q], placeholder: "Search by title or author...", class: "form-control" %>
+      <%= form.text_field :q, value: @query, placeholder: "Search by title or author...", class: "form-control" %>
     </div>
     <div class="col-sm-3 col-md-2">
       <%= form.label :status, "Status", class: "visually-hidden" %>
@@ -53,11 +53,11 @@
     <div class="d-flex flex-wrap align-items-center gap-1 mb-4">
       <span class="text-muted small me-1">Browse by genre:</span>
       <% @shelf_tags.each do |tag| %>
-        <%= link_to tag.name, readings_path(tag: tag.name, q: params[:q], status: params[:status], rating: params[:rating], sort: params[:sort]),
+        <%= link_to tag.name, readings_path(tag: tag.name, q: @query, status: params[:status], rating: params[:rating], sort: params[:sort]),
               class: ["badge text-decoration-none", @tag == tag ? "text-bg-primary" : "text-bg-secondary"] %>
       <% end %>
       <% if @tag %>
-        <%= link_to "Clear tag filter", readings_path(q: params[:q], status: params[:status], rating: params[:rating], sort: params[:sort]), class: "small ms-2" %>
+        <%= link_to "Clear tag filter", readings_path(q: @query, status: params[:status], rating: params[:rating], sort: params[:sort]), class: "small ms-2" %>
       <% end %>
     </div>
   <% end %>
@@ -97,7 +97,7 @@
 
 <div data-controller="shelf-browser"
      data-shelf-browser-initial-value="<%= @shelf_json.to_json %>"
-     data-shelf-browser-query-value="<%= params[:q] %>"
+     data-shelf-browser-query-value="<%= @query %>"
      data-shelf-browser-status-value="<%= params[:status] %>"
      data-shelf-browser-rating-value="<%= params[:rating] %>"
      data-shelf-browser-tag-value="<%= params[:tag] %>">
