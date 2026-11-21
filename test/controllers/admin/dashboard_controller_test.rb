@@ -25,6 +25,19 @@ class Admin::DashboardControllerTest < ActionDispatch::IntegrationTest
     assert_select "h3", text: "Trends"
   end
 
+  test "popular books show each book's reading count without a query per book" do
+    # two books with readings, so Bullet (raises in test) sees a per-book COUNT as an N+1
+    Reading.create!(user: users(:moderator), book: books(:two), status: :reading)
+    Reading.create!(user: users(:admin), book: books(:two), status: :finished)
+
+    sign_in_as users(:admin)
+    get admin_root_url
+
+    assert_response :success
+    assert_select "tbody tr", 2
+    assert_select "tbody tr:first-child .badge", text: "2"
+  end
+
   test "total user count excludes the deleted-user placeholder" do
     starting_count = User.excluding_deleted_placeholder.count
     User.deleted_placeholder
