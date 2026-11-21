@@ -3,7 +3,7 @@ require "test_helper"
 # adapted from community_bookshelf test/integration/null_byte_guard_test.rb (community_bookshelf#246),
 # minus its /api/v1 and Rack::Attack cases: neither exists here yet.
 # Postgres rejects strings containing NUL, and the PG adapter raises ArgumentError when one
-# is bound into a query, so these requests used to 500 (#147). NullByteGuard turns them into 400s.
+# is bound into a query, so most of these requests used to 500 (#147). NullByteGuard makes them 400s.
 class NullByteGuardTest < ActionDispatch::IntegrationTest
   test "a NUL in a search or tag query param is a 400" do
     ["/books?q=a%00b", "/books?tag=a%00b", "/books.json?q=a%00b"].each do |path|
@@ -30,6 +30,7 @@ class NullByteGuardTest < ActionDispatch::IntegrationTest
     assert_response :bad_request
   end
 
+  # never reached Postgres here (it was a 200); rejected anyway to match the reference
   test "a NUL in a param key is a 400" do
     get "/books?a%00b=1"
     assert_response :bad_request
@@ -45,6 +46,7 @@ class NullByteGuardTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  # nothing here reads the header yet (it was a 200); rejected for parity and a future API
   test "a NUL in the authorization header is a 400" do
     get books_url, headers: {"Authorization" => "Bearer ab\0cd"}
     assert_response :bad_request

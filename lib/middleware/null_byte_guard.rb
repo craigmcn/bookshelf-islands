@@ -1,5 +1,5 @@
 # ported from community_bookshelf lib/middleware/null_byte_guard.rb (community_bookshelf#246). Its /api/
-# branch is kept, unused, so the two copies stay in sync until this app gains an API.
+# branch and Rack::Attack mention are the reference's, kept so the two copies stay in sync.
 # Rejects any request carrying a NUL byte with a 400. Postgres can't store NUL, and the PG
 # adapter raises ArgumentError when one is bound into a query, so these used to surface as
 # 500s from search, sign-in, Rack::Attack's token lookup and more (community_bookshelf#246).
