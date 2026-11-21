@@ -17,7 +17,7 @@
     <% end %>
     <div class="col-sm-8 col-md-6">
       <%= form.label :q, "Search", class: "visually-hidden" %>
-      <%= form.text_field :q, value: params[:q], placeholder: "Search by title or author...", class: "form-control" %>
+      <%= form.text_field :q, value: @query, placeholder: "Search by title or author...", class: "form-control" %>
     </div>
     <div class="col-sm-4 col-md-3">
       <%= form.label :sort, "Sort by", class: "visually-hidden" %>
@@ -33,14 +33,14 @@
       <div class="d-flex flex-wrap align-items-center gap-1 mb-2">
         <span class="text-muted small me-1">Browse by <%= label.downcase %>:</span>
         <% tags.each do |tag| %>
-          <%= link_to tag.name, books_path(tag: tag.name, q: params[:q], sort: params[:sort]),
+          <%= link_to tag.name, books_path(tag: tag.name, q: @query, sort: @sort),
                 class: ["badge text-decoration-none", @tag == tag ? "text-bg-primary" : "text-bg-secondary"] %>
         <% end %>
       </div>
     <% end %>
   <% end %>
   <% if @tag %>
-    <%= link_to "Clear tag filter", books_path(q: params[:q], sort: params[:sort]), class: "small d-inline-block mb-3" %>
+    <%= link_to "Clear tag filter", books_path(q: @query, sort: @sort), class: "small d-inline-block mb-3" %>
   <% end %>
 
   <% if @books.any? %>
@@ -63,7 +63,7 @@
 
 <div data-controller="catalog-browser"
      data-catalog-browser-initial-value="<%= @catalog_json.to_json %>"
-     data-catalog-browser-query-value="<%= params[:q] %>"
+     data-catalog-browser-query-value="<%= @query %>"
      data-catalog-browser-tag-value="<%= params[:tag] %>">
   <div data-catalog-browser-target="root"></div>
 </div>

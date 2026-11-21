@@ -12,22 +12,28 @@ class ReadingsController < ApplicationController
 
   def index
     @readings = current_user.readings.includes(:book).joins(:book)
-    # Only filters that actually narrowed the query; unknown status/rating values are ignored below.
+    # Only filters that actually narrowed the query; a non-string q and unknown status/rating are ignored.
     @filters_applied = false
 
-    if params[:q].present?
-      query = "%#{params[:q].strip}%"
+    @query = search_query
+    if @query
+      query = "%#{@query}%"
       @readings = @readings.where("books.title ILIKE :q OR books.author ILIKE :q", q: query)
       @filters_applied = true
     end
 
-    if params[:status].present? && Reading.statuses.key?(params[:status])
-      @readings = @readings.where(status: params[:status])
+    # Views echo only these validated values, never raw params: a hash param (status[k]=x)
+    # handed to a *_path helper raises "unable to convert unpermitted parameters to hash".
+    @status = params[:status] if Reading.statuses.key?(params[:status])
+    @rating = params[:rating] if Reading.ratings.key?(params[:rating])
+
+    if @status
+      @readings = @readings.where(status: @status)
       @filters_applied = true
     end
 
-    if params[:rating].present? && Reading.ratings.key?(params[:rating])
-      @readings = @readings.where(rating: params[:rating])
+    if @rating
+      @readings = @readings.where(rating: @rating)
       @filters_applied = true
     end
 
