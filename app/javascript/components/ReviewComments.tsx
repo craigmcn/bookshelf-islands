@@ -41,8 +41,13 @@ export default function ReviewComments({ commentsUrl, initialComments, canCommen
         },
         body: JSON.stringify({ review_comment: { body } }),
       })
+      if (!response.ok) {
+        // only the 422 carries JSON errors; an HTML error page (500, NullByteGuard's 400) would throw on parse
+        const isJson = response.headers.get("content-type")?.includes("application/json")
+        const errors = isJson ? ((await response.json()) as { errors?: string[] }).errors : undefined
+        throw new Error(errors?.join(", ") || "Comment failed")
+      }
       const data = await response.json()
-      if (!response.ok) throw new Error(data.errors?.join(", ") ?? "Comment failed")
 
       setComments((previous) => [
         ...previous,

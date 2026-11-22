@@ -27,6 +27,24 @@ test.describe("Review likes and comments", () => {
     await expect(page.getByText("Great take on this one!")).toBeVisible();
     await expect(page.getByRole("link", { name: users.member.email })).toBeVisible();
 
+    // an HTML error page (e.g. NullByteGuard's 400.html) must show a readable message, not a JSON parse error (#154)
+    await page.route("**/review_comments", (route) =>
+      route.fulfill({ status: 400, contentType: "text/html", body: "<!doctype html><title>Bad request</title>" }),
+    );
+    await expect(page.getByPlaceholder("Add a comment…")).toHaveValue(""); // the first post's reset has landed
+    await page.getByPlaceholder("Add a comment…").fill("This one is rejected.");
+    await page.getByRole("button", { name: "Post Comment" }).click();
+    await expect(page.getByText("Comment failed")).toBeVisible();
+    await page.unroute("**/review_comments");
+
+    // a JSON validation error still shows the server's own messages
+    await page.route("**/review_comments", (route) =>
+      route.fulfill({ status: 422, json: { errors: ["Body is too long"] } }),
+    );
+    await page.getByRole("button", { name: "Post Comment" }).click();
+    await expect(page.getByText("Body is too long")).toBeVisible();
+    await page.unroute("**/review_comments");
+
     // revert the reading created for this test (soft-deleting it also destroys the
     // like/comment above) so the fixture users stay stable for other specs/runs
     await moderatorPage.goto(moderatorReadingUrl);
