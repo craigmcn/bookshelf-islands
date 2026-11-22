@@ -27,23 +27,22 @@ test.describe("Review likes and comments", () => {
     await expect(page.getByText("Great take on this one!")).toBeVisible();
     await expect(page.getByRole("link", { name: users.member.email })).toBeVisible();
 
-    // an HTML error page (e.g. NullByteGuard's 400.html) must show a readable message, not a JSON parse error (#154)
-    await page.route("**/review_comments", (route) =>
-      route.fulfill({ status: 400, contentType: "text/html", body: "<!doctype html><title>Bad request</title>" }),
-    );
-    await expect(page.getByPlaceholder("Add a comment…")).toHaveValue(""); // the first post's reset has landed
+    // failed posts show the island's own message, never a raw JSON parse error (#154)
+    const html = { contentType: "text/html", body: "<!doctype html><title>Error</title>" };
+    const failures = [
+      { name: "HTML error page (500, NullByteGuard's 400)", response: { status: 400, ...html }, message: "Comment failed" },
+      { name: "JSON validation error", response: { status: 422, json: { errors: ["Body is too long"] } }, message: "Body is too long" },
+      { name: "signed out (Clearance's empty 401)", response: { status: 401, contentType: "application/json", body: "" }, message: "Comment failed" },
+      { name: "Pundit denial (redirected to a 200 page)", response: { status: 200, ...html }, message: "Comment failed" },
+    ];
+    await expect(page.getByPlaceholder("Add a comment…")).toHaveValue(""); // else the fill below races the first post's reset
     await page.getByPlaceholder("Add a comment…").fill("This one is rejected.");
-    await page.getByRole("button", { name: "Post Comment" }).click();
-    await expect(page.getByText("Comment failed")).toBeVisible();
-    await page.unroute("**/review_comments");
-
-    // a JSON validation error still shows the server's own messages
-    await page.route("**/review_comments", (route) =>
-      route.fulfill({ status: 422, json: { errors: ["Body is too long"] } }),
-    );
-    await page.getByRole("button", { name: "Post Comment" }).click();
-    await expect(page.getByText("Body is too long")).toBeVisible();
-    await page.unroute("**/review_comments");
+    for (const { name, response, message } of failures) {
+      await page.route("**/review_comments", (route) => route.fulfill(response));
+      await page.getByRole("button", { name: "Post Comment" }).click();
+      await expect(page.locator("p.text-danger"), name).toHaveText(message);
+      await page.unroute("**/review_comments");
+    }
 
     // revert the reading created for this test (soft-deleting it also destroys the
     // like/comment above) so the fixture users stay stable for other specs/runs
