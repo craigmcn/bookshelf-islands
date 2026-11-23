@@ -33,7 +33,8 @@ test.describe("Review likes and comments", () => {
       { name: "HTML error page (500, NullByteGuard's 400)", response: { status: 400, ...html }, message: "Comment failed" },
       { name: "JSON validation error", response: { status: 422, json: { errors: ["Body is too long"] } }, message: "Body is too long" },
       { name: "signed out (Clearance's empty 401)", response: { status: 401, contentType: "application/json", body: "" }, message: "Comment failed" },
-      { name: "Pundit denial (redirected to a 200 page)", response: { status: 200, ...html }, message: "Comment failed" },
+      { name: "Pundit denial (JSON 403, #158)", response: { status: 403, json: { error: "You are not authorized to perform this action." } }, message: "You are not authorized to perform this action." },
+      { name: "a redirect followed to a 200 page", response: { status: 200, ...html }, message: "Comment failed" },
     ];
     await expect(page.getByPlaceholder("Add a comment…")).toHaveValue(""); // else the fill below races the first post's reset
     await page.getByPlaceholder("Add a comment…").fill("This one is rejected.");

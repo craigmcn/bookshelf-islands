@@ -28,6 +28,17 @@ class ReviewCommentsControllerTest < ActionDispatch::IntegrationTest
     assert_empty @reading.review_comments
   end
 
+  test "a denied JSON comment is a 403, not a redirect to an HTML page (#158)" do
+    @reading.update!(is_review_public: false)
+    sign_in_as users(:moderator)
+
+    post reading_review_comments_url(@reading), params: {review_comment: {body: "Nice!"}}, as: :json
+
+    assert_response :forbidden
+    assert_equal "You are not authorized to perform this action.", response.parsed_body["error"]
+    assert_empty @reading.review_comments
+  end
+
   test "comment author can delete their own comment" do
     comment = ReviewComment.create!(user: users(:moderator), reading: @reading, body: "Nice!")
     sign_in_as users(:moderator)
@@ -46,6 +57,17 @@ class ReviewCommentsControllerTest < ActionDispatch::IntegrationTest
     delete reading_review_comment_url(@reading, comment)
 
     assert_redirected_to root_url
+    assert ReviewComment.exists?(comment.id)
+  end
+
+  test "a denied JSON comment delete is a 403 (#158)" do
+    comment = ReviewComment.create!(user: users(:moderator), reading: @reading, body: "Nice!")
+    other = User.create!(email: "other@example.com", password: User::DEFAULT_PASSWORD)
+    sign_in_as other
+
+    delete reading_review_comment_url(@reading, comment), as: :json
+
+    assert_response :forbidden
     assert ReviewComment.exists?(comment.id)
   end
 

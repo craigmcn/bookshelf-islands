@@ -160,7 +160,7 @@ Both items (`[parity: solo]` in `doc/feature_roadmap.md` — net-new surface, no
 - `ApplicationController` includes `Pundit::Authorization` and calls `verify_authorized`
 - One policy per model in `app/policies/` — all default to `false`
 - Roles checked via `current_user.member?`, `.moderator?`, `.admin?`, `.moderator_or_above?`
-- Pundit errors are rescued in ApplicationController (renders 403)
+- Pundit errors are rescued in ApplicationController: a JSON request (an island's `fetch`) gets a 403 with `{error: ...}`, and anything else gets a flash alert and a redirect back (#158). `Admin::BaseController`'s role gate renders its own 403
 
 ### Role Hierarchy
 ```

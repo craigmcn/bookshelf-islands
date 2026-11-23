@@ -264,6 +264,23 @@ class ReadingsControllerTest < ActionDispatch::IntegrationTest
     assert_nil other.reload.deleted_at
   end
 
+  test "a denied JSON reading delete is a 403 (#158)" do
+    other = Reading.create!(user: users(:moderator), book: books(:two), status: :reading)
+    sign_in_as users(:member)
+    delete reading_url(other), as: :json
+    assert_response :forbidden
+    assert_equal "application/json", response.media_type
+    assert_nil other.reload.deleted_at
+  end
+
+  test "a denied request accepting any type still redirects, as before #158" do
+    other = Reading.create!(user: users(:moderator), book: books(:two), status: :reading)
+    sign_in_as users(:member)
+    delete reading_url(other), headers: {"Accept" => "*/*"}
+    assert_redirected_to root_url
+    assert_nil other.reload.deleted_at
+  end
+
   test "shelf offers its owner a remove control" do
     sign_in_as users(:member)
     get readings_url(format: :json)
