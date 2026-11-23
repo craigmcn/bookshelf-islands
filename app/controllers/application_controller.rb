@@ -13,8 +13,15 @@ class ApplicationController < ActionController::Base
 
   private
 
+  # an island's fetch would follow a redirect to a 200 HTML page and mistake it for success (#158)
   def user_not_authorized
-    flash[:alert] = "You are not authorized to perform this action."
-    redirect_back_or_to(root_path)
+    message = "You are not authorized to perform this action."
+    respond_to do |format|
+      format.json { render json: {error: message}, status: :forbidden }
+      format.any do
+        flash[:alert] = message
+        redirect_back_or_to(root_path)
+      end
+    end
   end
 end

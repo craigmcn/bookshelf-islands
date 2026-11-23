@@ -27,6 +27,17 @@ class ReviewLikesControllerTest < ActionDispatch::IntegrationTest
     assert_not @reading.review_likes.exists?(user: users(:moderator))
   end
 
+  test "a denied JSON like is a 403, not a redirect to an HTML page (#158)" do
+    @reading.update!(is_review_public: false)
+    sign_in_as users(:moderator)
+
+    post reading_review_like_url(@reading), as: :json
+
+    assert_response :forbidden
+    assert_equal "You are not authorized to perform this action.", response.parsed_body["error"]
+    assert_not @reading.review_likes.exists?(user: users(:moderator))
+  end
+
   test "liking twice does not raise and leaves a single like" do
     sign_in_as users(:moderator)
     post reading_review_like_url(@reading)
