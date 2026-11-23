@@ -269,6 +269,15 @@ class ReadingsControllerTest < ActionDispatch::IntegrationTest
     sign_in_as users(:member)
     delete reading_url(other), as: :json
     assert_response :forbidden
+    assert_equal "application/json", response.media_type
+    assert_nil other.reload.deleted_at
+  end
+
+  test "a denied request accepting any type still redirects, as before #158" do
+    other = Reading.create!(user: users(:moderator), book: books(:two), status: :reading)
+    sign_in_as users(:member)
+    delete reading_url(other), headers: {"Accept" => "*/*"}
+    assert_redirected_to root_url
     assert_nil other.reload.deleted_at
   end
 

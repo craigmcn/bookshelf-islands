@@ -44,10 +44,11 @@ export default function ReviewComments({ commentsUrl, initialComments, canCommen
         body: JSON.stringify({ review_comment: { body } }),
       })
       // only a 201 is a created comment. Error bodies may be HTML (500, NullByteGuard's 400), empty
-      // (Clearance's 401) or JSON without `errors` (Pundit's 403), so parse leniently.
+      // (Clearance's 401) or JSON with a single `error` (Pundit's 403), so parse leniently.
       const data = await response.json().catch(() => null)
       if (response.status !== 201 || !data) {
-        throw new CommentError(Array.isArray(data?.errors) ? data.errors.join(", ") : "Comment failed")
+        const message = Array.isArray(data?.errors) ? data.errors.join(", ") : data?.error
+        throw new CommentError(typeof message === "string" && message ? message : "Comment failed")
       }
 
       setComments((previous) => [
