@@ -27,6 +27,23 @@ test.describe("Review likes and comments", () => {
     await expect(page.getByText("Great take on this one!")).toBeVisible();
     await expect(page.getByRole("link", { name: users.member.email })).toBeVisible();
 
+    // failed posts show the island's own message, never a raw JSON parse error (#154)
+    const html = { contentType: "text/html", body: "<!doctype html><title>Error</title>" };
+    const failures = [
+      { name: "HTML error page (500, NullByteGuard's 400)", response: { status: 400, ...html }, message: "Comment failed" },
+      { name: "JSON validation error", response: { status: 422, json: { errors: ["Body is too long"] } }, message: "Body is too long" },
+      { name: "signed out (Clearance's empty 401)", response: { status: 401, contentType: "application/json", body: "" }, message: "Comment failed" },
+      { name: "Pundit denial (redirected to a 200 page)", response: { status: 200, ...html }, message: "Comment failed" },
+    ];
+    await expect(page.getByPlaceholder("Add a comment…")).toHaveValue(""); // else the fill below races the first post's reset
+    await page.getByPlaceholder("Add a comment…").fill("This one is rejected.");
+    for (const { name, response, message } of failures) {
+      await page.route("**/review_comments", (route) => route.fulfill(response));
+      await page.getByRole("button", { name: "Post Comment" }).click();
+      await expect(page.locator("p.text-danger"), name).toHaveText(message);
+      await page.unroute("**/review_comments");
+    }
+
     // revert the reading created for this test (soft-deleting it also destroys the
     // like/comment above) so the fixture users stay stable for other specs/runs
     await moderatorPage.goto(moderatorReadingUrl);

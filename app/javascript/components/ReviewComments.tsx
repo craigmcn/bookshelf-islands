@@ -16,6 +16,8 @@ interface ReviewCommentsProps {
   canComment: boolean
 }
 
+class CommentError extends Error {}
+
 function csrfToken() {
   return document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? ""
 }
@@ -41,8 +43,12 @@ export default function ReviewComments({ commentsUrl, initialComments, canCommen
         },
         body: JSON.stringify({ review_comment: { body } }),
       })
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.errors?.join(", ") ?? "Comment failed")
+      // only a 201 is a created comment: a Pundit denial redirects to a 200 HTML page. Error bodies
+      // may be HTML (500, NullByteGuard's 400) or empty (Clearance's 401), so parse leniently.
+      const data = await response.json().catch(() => null)
+      if (response.status !== 201 || !data) {
+        throw new CommentError(Array.isArray(data?.errors) ? data.errors.join(", ") : "Comment failed")
+      }
 
       setComments((previous) => [
         ...previous,
@@ -58,7 +64,8 @@ export default function ReviewComments({ commentsUrl, initialComments, canCommen
       ])
       setBody("")
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Comment failed")
+      // only our own messages reach the user, never a raw fetch/parse exception
+      setError(err instanceof CommentError ? err.message : "Comment failed")
     } finally {
       setPosting(false)
     }
