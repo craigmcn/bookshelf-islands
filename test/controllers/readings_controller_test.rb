@@ -349,4 +349,32 @@ class ReadingsControllerTest < ActionDispatch::IntegrationTest
 
     assert_equal [readings(:one).id, newer.id, older.id], JSON.parse(response.body)["readings"].pluck("id")
   end
+
+  # ported from community_bookshelf test/controllers/readings_controller_test.rb
+  test "guest cannot export readings" do
+    get export_readings_url(format: :csv)
+    assert_redirected_to sign_in_path
+  end
+
+  # ported from community_bookshelf test/controllers/readings_controller_test.rb
+  test "member can export their shelf as CSV" do
+    sign_in_as users(:member)
+    get export_readings_url(format: :csv)
+
+    assert_response :success
+    assert_equal "text/csv", @response.media_type
+    assert_match "Title,Author,ISBN", @response.body
+    assert_match @reading.book.title, @response.body
+  end
+
+  test "export leaves out other members' readings and soft-deleted ones" do
+    theirs = Reading.create!(user: users(:moderator), book: books(:two), status: :finished, review: "Not yours")
+    @reading.soft_delete
+
+    sign_in_as users(:member)
+    get export_readings_url(format: :csv)
+
+    rows = CSV.parse(response.body, headers: true)
+    assert_empty rows.select { |row| [theirs.book.title, @reading.book.title].include?(row["Title"]) }
+  end
 end
