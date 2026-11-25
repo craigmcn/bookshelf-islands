@@ -153,14 +153,14 @@ Plain ERB/forms as in the reference, no React island. Neither controller action 
 - `GoodreadsImport` (service) backs `GoodreadsImportsController` (`/goodreads_import`, 5MB cap). It matches each row to a `Book` by ISBN (ISBN13 or ISBN10), then by title+author compared with Postgres' `lower()` on both sides, before creating one. A row is skipped, never overwritten, if the member already has an *active* reading for that book, so re-uploading is a no-op and a soft-deleted reading doesn't block a re-import. `liberal_parsing` is needed for Goodreads' `="..."` ISBN quoting.
 - `apply_row` sets `Reading#skip_activity_logging` (transient), so an import doesn't flood followers' feeds. Badges still award.
 - Each row runs in its own savepoint and rescues database/range errors, so a bad row is counted as skipped (taking any new `Book` with it) instead of stopping the file at a 500 with half of it saved.
-- Hardening beyond the reference (#168, filed upstream as community_bookshelf#267 and siblings):
+- Hardening beyond the reference (#168; upstream as community_bookshelf#267 and #273-#278):
   - UTF-16 (by BOM) and Windows-1252 files are decoded. Both are Excel saves, and scrubbing them used to write `�` titles into the shared catalog.
   - NULs are stripped, since `NullByteGuard` skips uploaded files. A NUL in the header line means BOM-less UTF-16, so the file is rejected instead.
   - ISBNs must be 10 or 13 digits after stripping hyphens, so Excel's `9.78074E+12` or `N/A` can't match unrelated books.
   - Dates must be `YYYY/MM/DD` with a year of 1-9999. `Date.parse` read `5/12/23` as 2005-12-23.
   - Page counts too big for the 4-byte column are dropped.
   - A file without `Title`/`Author` headers raises `GoodreadsImport::UnrecognizedFile`, and the controller shows an alert instead of "Imported 0 book(s)".
-- Imports run in the request at about 18 queries per row and get slower as the catalog grows, since `isbn`/`lower(title)` are unindexed and `award_badges!` runs per row. See the follow-up issue before relying on it for large libraries.
+- Imports run in the request at about 18 queries per row and get slower as the catalog grows, since `isbn`/`lower(title)` are unindexed and `award_badges!` runs per row. See #170 before relying on it for large libraries. Other known gaps: duplicate catalog rows on re-upload (#171), sign-in after a signed-out export (#172), Goodreads `<br/>` tags (#173).
 
 ## Authentication & Authorization
 
