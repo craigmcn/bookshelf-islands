@@ -139,7 +139,7 @@ class GoodreadsImportTest < ActiveSupport::TestCase
   end
 
   test "drops a read date Postgres can't store rather than raising" do
-    result = GoodreadsImport.new(users(:member), HEADERS + "Dune,Frank Herbert,,,5,,,9999999-01-01,,read\n").call
+    result = GoodreadsImport.new(users(:member), HEADERS + "Dune,Frank Herbert,,,5,,,2024/9999999999/1,,read\n").call
 
     assert_equal 1, result.imported_count
     assert_nil users(:member).readings.find_by!(book: Book.find_by!(title: "Dune")).finished_on
@@ -155,5 +155,102 @@ class GoodreadsImportTest < ActiveSupport::TestCase
     assert_difference -> { users(:member).user_badges.where(badge_key: "books_finished_1").count }, 1 do
       GoodreadsImport.new(users(:member), HEADERS + "Dune,Frank Herbert,,,5,,,,,read\n").call
     end
+  end
+
+  def import(rows, user = users(:member)) = GoodreadsImport.new(user, HEADERS + rows).call
+
+  def reading_for(title, user = users(:member)) = user.readings.find_by!(book: Book.find_by!(title: title))
+
+  test "a row that raises is skipped, taking its new book with it, and later rows still import" do
+    import = GoodreadsImport.new(users(:member), HEADERS + "First,A,,,,,,,,read\nBoom,A,,,,,,,,read\nLast,A,,,,,,,,read\n")
+    apply_row = import.method(:apply_row)
+    import.define_singleton_method(:apply_row) do |reading, row|
+      raise ActiveRecord::StatementInvalid, "boom" if row["Title"] == "Boom"
+      apply_row.call(reading, row)
+    end
+
+    assert_equal [2, 1], import.call.to_a
+    assert_not Book.exists?(title: "Boom")
+  end
+
+  test "a row whose reading fails validation leaves no orphan book" do
+    import = GoodreadsImport.new(users(:member), HEADERS + "Orphan,A,,,,,,,,read\n")
+    import.define_singleton_method(:apply_row) { |reading, _row| reading.progress_percent = 101 }
+
+    assert_equal [0, 1], import.call.to_a
+    assert_not Book.exists?(title: "Orphan")
+  end
+
+  [["UTF-16LE", "\xFF\xFE"], ["UTF-16BE", "\xFE\xFF"]].each do |encoding, bom|
+    test "decodes a #{encoding} file with a BOM" do
+      csv = "Book Id,Title,Author,My Rating,Exclusive Shelf\n1,Café Łódź,José,4,read\n"
+      assert_equal [1, 0], GoodreadsImport.new(users(:member), bom.b + csv.encode(encoding).b).call.to_a
+      assert Book.exists?(title: "Café Łódź", author: "José")
+    end
+  end
+
+  test "rejects BOM-less UTF-16 instead of stripping its NULs into a matching header" do
+    csv = "Title,Author\nDune,Frank Herbert\n".encode("UTF-16LE").b
+    assert_raises(GoodreadsImport::UnrecognizedFile) { GoodreadsImport.new(users(:member), csv).call }
+  end
+
+  test "decodes a Windows-1252 file, as Excel saves plain CSV" do
+    csv = (HEADERS + "Ender’s Café,Orson Scott Card,,,,,,,,read\n").encode("Windows-1252").b
+    assert_equal [1, 0], GoodreadsImport.new(users(:member), csv).call.to_a
+    assert Book.exists?(title: "Ender’s Café")
+  end
+
+  test "rejects a file without Title and Author columns" do
+    ["", "title;author\nx;y\n", "Book Id,Authors\n1,x\n"].each do |content|
+      assert_raises(GoodreadsImport::UnrecognizedFile, content) { GoodreadsImport.new(users(:member), content).call }
+    end
+  end
+
+  test "an ISBN Excel mangled into scientific notation, or a placeholder, matches nothing" do
+    books(:two).update!(isbn: "9.78074E+12")
+    assert_equal [3, 0], import("Book A,A,,9.78074E+12,,,,,,read\nBook B,B,,9.78074E+12,,,,,,read\nBook C,C,N/A,,,,,,,read\n").to_a
+    assert_nil Book.find_by!(title: "Book A").isbn
+  end
+
+  test "falls back to the ISBN10 when Goodreads leaves ISBN13 as an empty =\"\"" do
+    books(:two).update!(isbn: "0441013597")
+    assert_no_difference("Book.count") { import(%(Dune,Frank Herbert,="0441013597",="",,,,,,read\n)) }
+    assert reading_for(books(:two).title)
+  end
+
+  test "matches a catalog book stored under its ISBN10 when the row has both" do
+    books(:two).update!(isbn: "0441013597")
+    assert_no_difference("Book.count") { import(%(Dune,Frank Herbert,="0441013597",="9780441013593",,,,,,read\n)) }
+  end
+
+  test "normalizes a hyphenated ISBN" do
+    import("Dune,Frank Herbert,,978-0-441-01359-3,,,,,,read\n")
+    assert_equal "9780441013593", Book.find_by!(title: "Dune").isbn
+  end
+
+  test "matches title and author case-insensitively, the same way Postgres does" do
+    assert_no_difference("Book.count") { import("#{books(:two).title.upcase},#{books(:two).author.downcase},,,,,,,,read\n") }
+    2.times { import("İstanbul,Orhan Pamuk,,,,,,,,read\n") }
+    assert_equal 1, Book.where(title: "İstanbul").count
+    assert_equal 1, users(:member).readings.joins(:book).where(books: {title: "İstanbul"}).count
+  end
+
+  test "a matching title by a different author is a different book" do
+    assert_difference("Book.count", 1) { import("#{books(:two).title},Someone Else,,,,,,,,read\n") }
+  end
+
+  test "parses only Goodreads' YYYY/MM/DD dates, leaving anything else blank" do
+    {"2023/05/12" => Date.new(2023, 5, 12), "2023-5-2" => Date.new(2023, 5, 2), "5/12/23" => nil,
+     "5/12/2023" => nil, "maybe" => nil, "2023/02/30" => nil, "0000/01/01" => nil, "2023/05/12 extra" => nil}.each_with_index do |(raw, expected), i|
+      import("Date #{i},A,,,,,,#{raw},,read\n")
+      finished_on = reading_for("Date #{i}").finished_on
+      expected ? assert_equal(expected, finished_on, raw) : assert_nil(finished_on, raw)
+    end
+  end
+
+  test "maps currently-reading, ignores ratings outside 1-5 and blanks an empty review" do
+    import("Now,A,,,6,,,,  ,currently-reading\nZero,A,,,0,,,,,read\n")
+    assert_equal ["reading", nil, nil], reading_for("Now").then { [it.status, it.rating, it.review] }
+    assert_nil reading_for("Zero").rating
   end
 end

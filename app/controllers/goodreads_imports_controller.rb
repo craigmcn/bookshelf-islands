@@ -16,5 +16,7 @@ class GoodreadsImportsController < ApplicationController
     redirect_to readings_path, notice: notice
   rescue CSV::MalformedCSVError
     redirect_to new_goodreads_import_path, alert: "That file doesn't look like a valid CSV export."
+  rescue GoodreadsImport::UnrecognizedFile
+    redirect_to new_goodreads_import_path, alert: "That file doesn't look like a Goodreads export: it needs Title and Author columns."
   end
 end

@@ -82,12 +82,16 @@ class GoodreadsImportsControllerTest < ActionDispatch::IntegrationTest
     assert_match "valid CSV", flash[:alert]
   end
 
-  test "a binary file imports nothing and does not error" do
+  test "a file that isn't a Goodreads export is redirected with an alert" do
     sign_in_as users(:member)
-
-    assert_no_difference ["Reading.count", "Book.count"] do
-      post goodreads_import_url, params: {file: fixture_file_upload("avatar.png", "text/csv")}
+    {fixture_file_upload("avatar.png", "text/csv") => "valid CSV",
+     Rack::Test::UploadedFile.new(StringIO.new(""), "text/csv", original_filename: "empty.csv") => "needs Title and Author columns",
+     Rack::Test::UploadedFile.new(StringIO.new("title;author\nx;y\n"), "text/csv", original_filename: "semi.csv") => "needs Title and Author columns"}.each do |file, alert|
+      assert_no_difference ["Reading.count", "Book.count"] do
+        post goodreads_import_url, params: {file: file}
+      end
+      assert_redirected_to new_goodreads_import_url
+      assert_match alert, flash[:alert]
     end
-    assert_response :redirect
   end
 end

@@ -367,6 +367,24 @@ class ReadingsControllerTest < ActionDispatch::IntegrationTest
     assert_match @reading.book.title, @response.body
   end
 
+  test "export writes every column, oldest reading first" do
+    # inserted after the fixture reading but created before it, so only the ORDER BY puts it first
+    older = Reading.create!(user: users(:member), book: books(:two), status: :dnf, format: :audiobook,
+      started_on: Date.new(2024, 1, 2), finished_on: Date.new(2024, 2, 3), progress_percent: 40,
+      review: "Line one\n\"quoted\"", is_review_public: false, created_at: 1.year.ago)
+    books(:two).update!(isbn: "9780451524935")
+
+    sign_in_as users(:member)
+    get export_readings_url(format: :csv)
+
+    rows = CSV.parse(response.body, headers: true)
+    assert_equal [older.book.title, @reading.book.title], rows.pluck("Title")
+    assert_equal [books(:two).title, books(:two).author, "9780451524935", "DNF", nil, "audiobook", "2024-01-02", "2024-02-03",
+      "40", "Line one\n\"quoted\"", "false", older.created_at.to_date.iso8601], rows[0].fields
+    assert_equal ["4", "true"], [rows[1]["Rating"], rows[1]["Review Public"]]
+    assert_match(/\Aattachment; filename="my-shelf-\d{4}-\d{2}-\d{2}\.csv"/, response.headers["Content-Disposition"])
+  end
+
   test "export leaves out other members' readings and soft-deleted ones" do
     theirs = Reading.create!(user: users(:moderator), book: books(:two), status: :finished, review: "Not yours")
     @reading.soft_delete

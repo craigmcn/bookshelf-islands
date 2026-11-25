@@ -16,6 +16,15 @@ test.describe("Shelf import and export", () => {
     expect(await readFile(await download.path(), "utf8")).toContain("The Great Gatsby,F. Scott Fitzgerald");
   });
 
+  test("My Shelf fits a 320px phone without sideways scrolling", async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 640 });
+    await signIn(page, users.member);
+    await page.goto("/readings");
+
+    await expect(page.getByRole("link", { name: "Log a Reading" })).toBeInViewport({ ratio: 1 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+  });
+
   test("member can upload a Goodreads CSV, skipping books already on their shelf", async ({ page }) => {
     await signIn(page, users.member);
     await page.goto("/readings");

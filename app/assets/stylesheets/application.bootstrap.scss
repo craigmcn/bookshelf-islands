@@ -45,6 +45,12 @@ body {
   padding-bottom: 2rem;
 }
 
+// .visually-hidden labels (the shelf's icon-only row actions) are position:absolute, so without
+// a positioned ancestor they escape this scroll box and make the whole page scroll sideways on phones
+.table-responsive {
+  position: relative;
+}
+
 // ── Navbar ────────────────────────────────────────────────────────────────
 
 .navbar {

@@ -122,4 +122,11 @@ class ReadingTest < ActiveSupport::TestCase
     assert_empty ReviewLike.where(reading_id: reading.id)
     assert_empty ReviewComment.where(reading_id: reading.id)
   end
+
+  test "skip_activity_logging suppresses status and review activities on update too" do
+    reading = Reading.create!(user: users(:member), book: books(:two), status: :want_to_read, skip_activity_logging: true)
+    reading.update!(status: :finished, review: "Imported", is_review_public: true)
+
+    assert_empty reading.activities
+  end
 end
