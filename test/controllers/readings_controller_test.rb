@@ -349,4 +349,50 @@ class ReadingsControllerTest < ActionDispatch::IntegrationTest
 
     assert_equal [readings(:one).id, newer.id, older.id], JSON.parse(response.body)["readings"].pluck("id")
   end
+
+  # ported from community_bookshelf test/controllers/readings_controller_test.rb
+  test "guest cannot export readings" do
+    get export_readings_url(format: :csv)
+    assert_redirected_to sign_in_path
+  end
+
+  # ported from community_bookshelf test/controllers/readings_controller_test.rb
+  test "member can export their shelf as CSV" do
+    sign_in_as users(:member)
+    get export_readings_url(format: :csv)
+
+    assert_response :success
+    assert_equal "text/csv", @response.media_type
+    assert_match "Title,Author,ISBN", @response.body
+    assert_match @reading.book.title, @response.body
+  end
+
+  test "export writes every column, oldest reading first" do
+    # inserted after the fixture reading but created before it, so only the ORDER BY puts it first
+    older = Reading.create!(user: users(:member), book: books(:two), status: :dnf, format: :audiobook,
+      started_on: Date.new(2024, 1, 2), finished_on: Date.new(2024, 2, 3), progress_percent: 40,
+      review: "Line one\n\"quoted\"", is_review_public: false, created_at: 1.year.ago)
+    books(:two).update!(isbn: "9780451524935")
+
+    sign_in_as users(:member)
+    get export_readings_url(format: :csv)
+
+    rows = CSV.parse(response.body, headers: true)
+    assert_equal [older.book.title, @reading.book.title], rows.pluck("Title")
+    assert_equal [books(:two).title, books(:two).author, "9780451524935", "DNF", nil, "audiobook", "2024-01-02", "2024-02-03",
+      "40", "Line one\n\"quoted\"", "false", older.created_at.to_date.iso8601], rows[0].fields
+    assert_equal ["4", "true"], [rows[1]["Rating"], rows[1]["Review Public"]]
+    assert_match(/\Aattachment; filename="my-shelf-\d{4}-\d{2}-\d{2}\.csv"/, response.headers["Content-Disposition"])
+  end
+
+  test "export leaves out other members' readings and soft-deleted ones" do
+    theirs = Reading.create!(user: users(:moderator), book: books(:two), status: :finished, review: "Not yours")
+    @reading.soft_delete
+
+    sign_in_as users(:member)
+    get export_readings_url(format: :csv)
+
+    rows = CSV.parse(response.body, headers: true)
+    assert_empty rows.select { |row| [theirs.book.title, @reading.book.title].include?(row["Title"]) }
+  end
 end

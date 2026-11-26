@@ -2,7 +2,11 @@ Rails.application.routes.draw do
   resources :readings do
     resource :review_like, only: [:create, :destroy]
     resources :review_comments, only: [:create, :destroy]
+    collection do
+      get :export
+    end
   end
+  resource :goodreads_import, only: [:new, :create]
   resources :books
   resources :series
   get "book_search", to: "book_search#index"

@@ -21,12 +21,14 @@ class Reading < ApplicationRecord
   validates :progress_percent, numericality: {only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 100}, allow_nil: true
   validate :finished_on_not_before_started_on
 
-  # ported from community_bookshelf app/models/reading.rb (activity-feed callbacks —
-  # skip_activity_logging, used there to suppress these during bulk import, omitted:
-  # Import/export isn't ported here yet, so there's no bulk-creation path to guard against)
-  after_create :record_added_book_activity
-  after_update :record_status_change_activity, if: :saved_change_to_status?
-  after_update :record_review_activity, if: -> { review.present? && is_review_public? && review_before_last_save.blank? }
+  # Set by bulk-creation paths (e.g. GoodreadsImport) so importing dozens of already-read
+  # books doesn't blast every follower's feed. Badges still award: that's genuine history.
+  # ported from community_bookshelf app/models/reading.rb (skip_activity_logging + activity-feed callbacks)
+  attr_accessor :skip_activity_logging
+
+  after_create :record_added_book_activity, unless: :skip_activity_logging
+  after_update :record_status_change_activity, if: -> { saved_change_to_status? && !skip_activity_logging }
+  after_update :record_review_activity, if: -> { !skip_activity_logging && review.present? && is_review_public? && review_before_last_save.blank? }
   # ported from community_bookshelf app/models/reading.rb (award_badges callback)
   after_save :award_badges, if: -> { saved_change_to_status? || saved_change_to_review? }
 
