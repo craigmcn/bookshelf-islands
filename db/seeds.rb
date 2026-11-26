@@ -1,6 +1,4 @@
-# ported from community_bookshelf db/seeds.rb, minus its audit-log section: there's no
-# AuditLog here yet (#76). Restore that section when it lands; the per-key RNGs mean
-# dropping it doesn't change any other seeded data.
+# ported from community_bookshelf db/seeds.rb
 require "faker"
 require "zlib"
 
@@ -57,7 +55,7 @@ all_users = [admin_user, mod_user] + fake_members
 member_users = fake_members
 
 # A handful of moderators drawn from the regular membership, so admin actions
-# in the seed data (audit logs once #76 lands, role changes) have more than one mod to work with.
+# in the seed data (audit logs, role changes) have more than one mod to work with.
 extra_moderators = member_users.sample(4, random: seeded_rng("extra-moderators"))
 extra_moderators.each { |u| u.roles = [moderator_role, member_role] }
 
@@ -264,7 +262,9 @@ all_users.each do |user|
   sample_books = books.sample(reading_rng.rand(10..45), random: reading_rng)
 
   sample_books.each do |book|
-    reading = Reading.find_or_create_by!(user: user, book: book) do |r|
+    # Unscoped, so a re-run finds the readings the last run soft-deleted
+    # instead of making new ones (#251).
+    reading = Reading.unscoped.find_or_create_by!(user: user, book: book) do |r|
       r.status = "want_to_read"
     end
     next unless reading.previously_new_record?
@@ -299,7 +299,7 @@ all_users.each do |user|
 end
 
 # A rare few soft-deleted readings, so the default scope and AuditLog's
-# destroy_reading action (once #76 lands) have something real to reflect.
+# destroy_reading action (below) have something real to reflect.
 soft_deleted_readings.each { |r| r.soft_delete unless r.deleted? }
 
 # ---------------------------------------------------------------------------
@@ -444,6 +444,32 @@ puts "Marking some notifications read..."
 Notification.where(read_at: nil).where("id % 3 != 0").find_each do |notification|
   notification_rng = seeded_rng("notification-read-at", notification.id)
   notification.update_column(:read_at, notification.created_at + notification_rng.rand(1..48).hours)
+end
+
+# ---------------------------------------------------------------------------
+# Audit logs — plausible moderator/admin history, tied to real records.
+# ---------------------------------------------------------------------------
+puts "Seeding audit logs..."
+moderators_and_admins = all_users.select(&:moderator_or_above?)
+
+member_users.sample(12, random: seeded_rng("audit-log-targets")).each do |target_user|
+  audit_rng = seeded_rng("audit-log-actor", target_user.id)
+  actor = moderators_and_admins.sample(random: audit_rng)
+  next if AuditLog.exists?(actor: actor, action: "update_roles", subject: target_user)
+
+  from_roles = target_user.roles.pluck(:name)
+  to_roles = ([member_role.name] + ((audit_rng.rand < 0.3) ? [moderator_role.name] : [])).uniq
+  AuditLog.create!(actor: actor, action: "update_roles", subject: target_user, details: {from: from_roles, to: to_roles})
+end
+
+soft_deleted_readings.select(&:deleted?).each do |reading|
+  actor = moderators_and_admins.sample(random: seeded_rng("audit-log-reading-actor", reading.id))
+  next if AuditLog.exists?(actor: actor, action: "destroy_reading", subject: reading)
+
+  AuditLog.create!(
+    actor: actor, action: "destroy_reading", subject: reading,
+    details: {owner_email: reading.user.email, book_title: reading.book.title}
+  )
 end
 
 puts "Done."

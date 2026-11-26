@@ -87,7 +87,7 @@ class BooksController < ApplicationController
 
   def destroy
     authorize @book
-    @book.destroy!
+    destroy_book_with_audit!(@book)
     redirect_to books_path, notice: "Book was successfully destroyed.", status: :see_other
   end
 
