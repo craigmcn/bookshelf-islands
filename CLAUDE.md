@@ -41,7 +41,7 @@ bin/rails test:system                   # Capybara system tests
 bin/rails routes                        # list all routes
 bin/rails db:migrate                    # run pending migrations
 bin/rails db:rollback                   # undo last migration
-bin/rails db:seed                       # demo data: same Faker-generated users/books/readings as community_bookshelf (minus audit logs until #76)
+bin/rails db:seed                       # demo data: same Faker-generated users/books/readings/audit logs as community_bookshelf
 
 bin/rubocop                             # lint (StandardRB via standard + standard-rails)
 bin/rubocop -a                          # auto-correct safe offenses
@@ -162,6 +162,14 @@ Plain ERB/forms as in the reference, no React island. Neither controller action 
   - A file without `Title`/`Author` headers raises `GoodreadsImport::UnrecognizedFile`, and the controller shows an alert instead of "Imported 0 book(s)".
 - Imports run in the request at about 18 queries per row and get slower as the catalog grows, since `isbn`/`lower(title)` are unindexed and `award_badges!` runs per row. See #170 before relying on it for large libraries. Other known gaps: duplicate catalog rows on re-upload (#171), sign-in after a signed-out export (#172), Goodreads `<br/>` tags (#173).
 
+### Audit log (done)
+Ported from community_bookshelf#119 (#76). `AuditLog` (`actor` → `User`, polymorphic `subject`, `action`, jsonb `details`) records the moderator/admin actions taken on someone else's behalf, and `/admin/audit_logs` (admin only, Pagy) lists them newest first.
+- Each audited action goes through an `AuditsModeratorActions` helper (included in `ApplicationController`) that writes the change and its log entry in one transaction, so neither can happen without the other: `destroy_book_with_audit!` (`BooksController#destroy`), `update_roles_with_audit!` (`Admin::UsersController#update`, `details` has the `from`/`to` role names), and `soft_delete_reading!` (`ReadingsController#destroy`, which both the shelf and the admin moderation island use).
+- `soft_delete_reading!` logs only when the reading belongs to someone else. `ReadingPolicy#destroy?` refuses an already-deleted reading, so the same delete can't be logged twice.
+- `details` keeps what the admin page needs to read (book title, owner email), since `subject` can't be loaded: a destroyed book is gone, and the default scope hides a soft-deleted reading. Compare `subject_type`/`subject_id` in tests, not `subject`.
+- `User has_many :audit_logs` has no `dependent: :destroy`, because the trail must outlive the moderator. `delete_account!` reassigns their entries to the deleted-user placeholder, as it does for books and clubs.
+- CB also audits its `/api/v1` deletes and role changes through the same helpers. There's no API here yet, so those call sites have nothing to port into.
+
 ## Authentication & Authorization
 
 ### Clearance
@@ -224,6 +232,7 @@ namespace :admin
   /admin/dashboard       Admin::DashboardController   (admin only)
   /admin/readings        AdminReadingsController      (moderator+)
   /admin/users           AdminUsersController         (admin only)
+  /admin/audit_logs      Admin::AuditLogsController   (admin only)
 ```
 
 ## Testing Conventions
@@ -262,7 +271,7 @@ For page-level navigation, default to out-of-the-box Rails + Hotwire/Stimulus, w
 3. The React component owns all interaction state; it reports changes back via a callback prop (e.g. `onChange`, `onDeleted`), which the Stimulus controller uses to write hidden form fields or make a DOM change outside the React tree (e.g. fading the containing table row).
 4. The component talks to Rails via a JSON endpoint (e.g. `/book_search.json`, or an existing HTML endpoint that also responds to `format.json`) rather than Turbo Frames/Streams.
 
-Existing islands: `BookSearch` (search-and-select, syncs hidden fields), `RatingPicker` (star picker, syncs a hidden field), `DeleteReadingControl` (inline Yes/Cancel confirm + fetch DELETE, no hidden fields involved — used by the admin moderation table, which fades the row, and by the `ShelfBrowser` shelf row as an icon-only "Remove reading" control via `iconLabel`, which drops the row and shows a "Reading was removed." alert, then moves focus to the row that took its place, or to the alert once the page is empty (#140)). `ReadingPolicy#destroy?` is owner-or-moderator (community_bookshelf#238); there's no audit log here yet (#76), so CB's "audit only when deleting someone else's reading" rule has nothing to port into.
+Existing islands: `BookSearch` (search-and-select, syncs hidden fields), `RatingPicker` (star picker, syncs a hidden field), `DeleteReadingControl` (inline Yes/Cancel confirm + fetch DELETE, no hidden fields involved — used by the admin moderation table, which fades the row, and by the `ShelfBrowser` shelf row as an icon-only "Remove reading" control via `iconLabel`, which drops the row and shows a "Reading was removed." alert, then moves focus to the row that took its place, or to the alert once the page is empty (#140)). `ReadingPolicy#destroy?` is owner-or-moderator (community_bookshelf#238). Deleting someone else's reading is audited, deleting your own isn't (see Audit log).
 
 ### NUL bytes in requests
 `NullByteGuard` (`lib/middleware/null_byte_guard.rb`, ported from community_bookshelf#246, identical apart from its port note, inserted before `ActionDispatch::Cookies` in `config/application.rb`) returns `public/400.html` with a 400 for any request with a NUL byte in its decoded path, query or body params (keys and values), Clearance's `remember_token` cookie (other cookies aren't DB keys, and a stray one set on a parent domain shouldn't lock a browser out), or `request.authorization`. Postgres can't store NUL, so one bound into a query (search, tag, sign-in, `/confirm_email/:token`, the remember-token cookie) used to raise `ArgumentError` and 500 (#147). Uploaded files are skipped, since binary content legitimately contains NUL. Its `/api/` JSON-error branch is unused here (no API namespace yet) but kept so the file stays in sync with the reference. It parses params with Rails' own parser before routing, so a per-action `skip_parameter_encoding`/`param_encoding` would be silently ignored; nothing uses them today. It closes multipart tempfiles itself (it sits upstream of `Rack::TempfileReaper`) and logs one `NullByteGuard: 400` line per rejection, without the offending value. `lib/middleware` is excluded from autoloading because middleware is wired up at boot.

@@ -41,6 +41,9 @@ class User < ApplicationRecord
   # ported from community_bookshelf app/models/user.rb (reading_challenges/user_badges associations)
   has_many :reading_challenges, dependent: :destroy
   has_many :user_badges, dependent: :destroy
+  # ported from community_bookshelf app/models/user.rb. No dependent: :destroy: the log records what
+  # a moderator did, so it outlives their account, reassigned to the placeholder in delete_account!.
+  has_many :audit_logs, foreign_key: :actor_id, inverse_of: :actor
   has_one_attached :avatar
 
   # Excludes the system placeholder account from user-facing listings (admin
@@ -242,6 +245,7 @@ class User < ApplicationRecord
       placeholder_id = self.class.deleted_placeholder.id
       books.update_all(added_by_id: placeholder_id)
       created_clubs.update_all(created_by_id: placeholder_id)
+      audit_logs.update_all(actor_id: placeholder_id)
       Reading.unscoped.where(user_id: id).destroy_all
       destroy!
     end

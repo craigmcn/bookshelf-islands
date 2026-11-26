@@ -310,6 +310,47 @@ class ReadingsControllerTest < ActionDispatch::IntegrationTest
     assert_not_nil @reading.reload.deleted_at
   end
 
+  # ported from community_bookshelf test/controllers/readings_controller_test.rb
+  test "soft-deleting a reading writes an audit log entry" do
+    moderator = users(:moderator)
+    sign_in_as moderator
+
+    assert_difference "AuditLog.count", 1 do
+      delete reading_url(@reading)
+    end
+
+    audit_log = AuditLog.last
+    assert_equal moderator, audit_log.actor
+    assert_equal "destroy_reading", audit_log.action
+    # subject_id, not subject: the default scope hides the now soft-deleted reading
+    assert_equal ["Reading", @reading.id], [audit_log.subject_type, audit_log.subject_id]
+    assert_equal({"owner_email" => @reading.user.email, "book_title" => @reading.book.title}, audit_log.details)
+  end
+
+  # the admin moderation table's DeleteReadingControl island deletes through this JSON route
+  test "a moderator's JSON delete is audited too" do
+    sign_in_as users(:moderator)
+    assert_difference("AuditLog.count", 1) { delete reading_url(@reading), as: :json }
+    assert_equal ["destroy_reading", @reading.id], AuditLog.last.then { [it.action, it.subject_id] }
+  end
+
+  test "removing your own reading isn't audited, even as a moderator" do
+    own = Reading.create!(user: users(:moderator), book: books(:two), status: :reading)
+    sign_in_as users(:moderator)
+    assert_no_difference("AuditLog.count") { delete reading_url(own), as: :json }
+    assert_not_nil own.reload.deleted_at
+
+    sign_in_as users(:member)
+    assert_no_difference("AuditLog.count") { delete reading_url(@reading) }
+  end
+
+  test "an already-removed reading can't be removed, and audited, a second time" do
+    @reading.soft_delete
+    sign_in_as users(:moderator)
+    assert_no_difference("AuditLog.count") { delete reading_url(@reading), as: :json }
+    assert_response :forbidden
+  end
+
   test "noscript shelf distinguishes an empty shelf from a filter with no matches" do
     sign_in_as users(:admin) # no readings of their own
     get readings_url

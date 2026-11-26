@@ -290,6 +290,39 @@ class BooksControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to books_url
   end
 
+  # ported from community_bookshelf test/controllers/books_controller_test.rb
+  test "destroying a book writes an audit log entry" do
+    admin = users(:admin)
+    title = @book.title
+    sign_in_as admin
+
+    assert_difference "AuditLog.count", 1 do
+      delete book_url(@book)
+    end
+
+    audit_log = AuditLog.last
+    assert_equal admin, audit_log.actor
+    assert_equal "destroy_book", audit_log.action
+    assert_equal ["Book", @book.id], [audit_log.subject_type, audit_log.subject_id]
+    assert_equal title, audit_log.details["title"]
+  end
+
+  test "a member's denied book delete writes no audit entry" do
+    sign_in_as users(:member)
+    assert_no_difference(["Book.count", "AuditLog.count"]) { delete book_url(@book) }
+  end
+
+  # an unaudited moderator delete is what the shared transaction exists to prevent
+  test "a book delete whose audit entry fails to save is rolled back" do
+    AuditLog.define_singleton_method(:create!) { |*| raise ActiveRecord::RecordInvalid }
+    sign_in_as users(:admin)
+    delete book_url(@book)
+    assert_response :unprocessable_content
+    assert Book.exists?(@book.id)
+  ensure
+    AuditLog.singleton_class.remove_method(:create!)
+  end
+
   test "View on Shelf links to the newest of several readings of a book" do
     sign_in_as users(:member)
     reread = Reading.create!(user: users(:member), book: books(:one), status: :want_to_read)

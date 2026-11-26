@@ -13,7 +13,7 @@ class Admin::UsersController < Admin::BaseController
 
   def update
     @user = User.excluding_deleted_placeholder.find(params[:id])
-    @user.roles = Role.where(id: params.dig(:user, :role_ids) || [])
+    update_roles_with_audit!(@user, Role.where(id: params.dig(:user, :role_ids) || []))
     redirect_to admin_users_path, notice: "Roles updated."
   end
 end

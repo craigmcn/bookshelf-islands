@@ -54,5 +54,6 @@ Rails.application.routes.draw do
     root "dashboard#index"
     resources :users, only: [:index, :edit, :update]
     resources :readings, only: [:index]
+    resources :audit_logs, only: [:index]
   end
 end
